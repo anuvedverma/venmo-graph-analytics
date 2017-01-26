@@ -1,0 +1,14 @@
+# To list Kafka topics
+/usr/local/kafka/bin/kafka-topics.sh --list --zookeeper localhost:2181
+
+# To view Kafka topic contents
+/usr/local/kafka/bin/kafka-console-consumer.sh --zookeeper localhost:2181 --topic Venmo-Transactions-Test
+
+# To view Kafka topic contents from beginning
+/usr/local/kafka/bin/kafka-console-consumer.sh --zookeeper localhost:2181 --from-beginning --topic Venmo-Transactions-Test
+
+# To run Spark Stream with Kafka consumer (local)
+sudo $SPARK_HOME/bin/spark-submit --packages org.apache.spark:spark-streaming-kafka-0-8_2.11:2.1.0 kafka-spark-test.py
+
+# To run Spark Stream with Kafka consumer (cluster)
+spark-submit --packages org.apache.spark:spark-streaming-kafka-0-8_2.11:2.1.0 kafka-spark-test.py
