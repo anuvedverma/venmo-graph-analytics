@@ -1,12 +1,20 @@
+#!/usr/bin/python
+
+# Used https://github.com/dpkp/kafka-python/blob/master/example.py as starting point
+
 import botocore
 import boto3
 import threading, logging, time
-
 from kafka import KafkaConsumer, KafkaProducer
 
 
 class Producer(threading.Thread):
     daemon = True
+
+    # def __init__(self):
+    #   super(Producer, self).__init__()
+    #   self.producer = KafkaProducer(bootstrap_servers='52.25.139.222:9092')
+
 
     def run(self):
         producer = KafkaProducer(bootstrap_servers='52.25.139.222:9092')
@@ -18,7 +26,7 @@ class Producer(threading.Thread):
             obj_body = obj.get()['Body']
             json_body = obj_body.read()
             producer.send('Venmo-Transactions-Test', json_body)
-            time.sleep(0.5)
+            time.sleep(5)
             print json_body
 
     def __get_s3_bucket__(self, bucket_name):
@@ -40,18 +48,6 @@ class Producer(threading.Thread):
 
 
 
-    # def __incTypeCount__(self, table, crime_type):
-    #     print("BEFORE: " + crime_type + ": " + str(table.row(crime_type)))
-    #     count_dict = table.row(crime_type)
-    #     count = 0
-    #     if count_dict:
-    #         count = int(count_dict['crime_type:count'])
-    #     updated_dict = {'crime_type:count': str(count + 1)}
-    #     table.put(crime_type, updated_dict)
-    #     print("AFTER: " + crime_type + ": " + str(table.row(crime_type)))
-
-
-
 if __name__ == "__main__":
     print "Entered main"
     logging.basicConfig(
@@ -61,4 +57,4 @@ if __name__ == "__main__":
 
     producer = Producer()
     producer.start()
-    time.sleep(15)
+    time.sleep(60)
