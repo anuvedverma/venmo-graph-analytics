@@ -12,3 +12,6 @@ sudo $SPARK_HOME/bin/spark-submit --packages org.apache.spark:spark-streaming-ka
 
 # To run Spark Stream with Kafka consumer (cluster)
 spark-submit --packages org.apache.spark:spark-streaming-kafka-0-8_2.11:2.1.0 kafka-spark-test.py
+
+# To start DynamoDB locally
+java -Djava.library.path=./DynamoDBLocal_lib -jar DynamoDBLocal.jar -sharedDb

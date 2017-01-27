@@ -24,10 +24,11 @@ class Producer(threading.Thread):
         bucket = self.__get_s3_bucket__(bucket_name)
         for obj in bucket.objects.limit(10):
             obj_body = obj.get()['Body']
-            json_body = obj_body.read()
-            producer.send('Venmo-Transactions-Test', json_body)
-            time.sleep(5)
-            print json_body
+            json_body = obj_body.read().splitlines()
+            for json_obj in json_body:
+                producer.send('Venmo-Transactions-Test', json_obj)
+                time.sleep(1)
+                print json_obj + '\n' + '==============================================================================' + '\n'
 
     def __get_s3_bucket__(self, bucket_name):
         s3 = boto3.resource('s3')
@@ -57,4 +58,4 @@ if __name__ == "__main__":
 
     producer = Producer()
     producer.start()
-    time.sleep(60)
+    time.sleep(30)
