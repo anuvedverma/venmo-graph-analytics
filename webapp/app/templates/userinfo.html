@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block userinfo %}
+<div class="container">
+    <div class="starter-template">
+        <div class="row" style="height:100vh;">
+            <div class="col-md-10 col-md-offset-1">
+                <table class="table">
+                    <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Username</th>
+                        <th>Message</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr>
+                        <td>{{output.name}}</td>
+                        <td>{{output.username}}</td>
+                        <td>{{output.message}}</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
