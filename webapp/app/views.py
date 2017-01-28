@@ -23,8 +23,8 @@ dynamo_table = dynamodb.Table('venmo-graph-analytics-test')  # Set DynamoDB tabl
 def index():
     user = {'nickname': 'Miguel'}  # fake user
     mylist = [1, 2, 3, 4]
-    return render_template("index.html", title='Home', list=mylist)
-    # return render_template("index.html", title='Home', user=user)
+    # return render_template("index.html", title='Home', list=mylist, )
+    return render_template("index.html", title='Home', user=user)
 
 @app.route('/usersearch')
 def usersearch():

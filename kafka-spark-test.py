@@ -8,7 +8,7 @@ from pyspark.streaming import StreamingContext
 from pyspark.streaming.kafka import KafkaUtils
 import json
 import boto3
-import re
+import redis
 
 
 # Extract relevant data from json body
@@ -29,21 +29,37 @@ def send_partition(iter):
                             region_name='us-west-2',
                             endpoint_url='http://localhost:8000')  # Set DynamoDB connection (local)
     # dynamodb = boto3.resource('dynamodb') # Set DynamoDB connection (cluster)
-    table = dynamodb.Table('venmo-graph-analytics-test')  # Set DynamoDB table
+    dynamo_table = dynamodb.Table('venmo-graph-analytics-test')  # Set DynamoDB table
+
+    redis_server = 'ec2-52-33-8-227.us-west-2.compute.amazonaws.com'
+    # redis_server = 'localhost'
+    redis_db = redis.StrictRedis(host=redis_server, port=6379, db=0)
 
     for record in iter:
         print("Sending partition...")
-        print(record)
-        table.put_item(
+        dynamo_table.put_item(
             Item={
                 'username': record['username'],
                 'name': record['name'],
                 'message': record['message'],
             }
         )
+        # Getting an item
+        response = dynamo_table.get_item(Key={'username': record['username']})
+        json_response = {"name": response['Item']['name'], "username": response['Item']['username'],
+                         "message": response['Item']['message']}
+        print("Successfully put " + str(json_response) + " into DynamoDB")
+
+
+        redis_db.set(response['Item']['username'], response['Item']['message'])
+
+        username = response['Item']['username']
+        print("Successfully put " + read_redis(redis_db, username) + " into Redis")
     # return to the pool for future reuse
     # ConnectionPool.returnConnection(connection)
 
+def read_redis(redis_db, key):
+    return str(redis_db.get(key))
 
 # Update DynamoDB according to new transaction data
 def update_dynamodb(table, data_dict):

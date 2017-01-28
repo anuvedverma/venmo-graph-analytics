@@ -1,3 +1,5 @@
+## ======= USEFUL COMMANDS ======= ##
+
 # To list Kafka topics
 /usr/local/kafka/bin/kafka-topics.sh --list --zookeeper localhost:2181
 
@@ -15,3 +17,18 @@ spark-submit --packages org.apache.spark:spark-streaming-kafka-0-8_2.11:2.1.0 ka
 
 # To start DynamoDB locally
 java -Djava.library.path=./DynamoDBLocal_lib -jar DynamoDBLocal.jar -sharedDb
+
+# To start Redis (can only do on cluster)
+redis-server --protected-mode no
+
+## ============================= ##
+
+## ======= CLUSTER SETUP ======= ##
+
+# Run locally
+peg service anuvedverma-cluster zookeeper start
+peg service anuvedverma-cluster kafka start
+peg service anuvedverma-cluster spark start
+
+# Run on cluster
+redis-server --protected-mode no
