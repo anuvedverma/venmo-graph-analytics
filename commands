@@ -3,6 +3,9 @@
 # To list Kafka topics
 /usr/local/kafka/bin/kafka-topics.sh --list --zookeeper localhost:2181
 
+# To create new Kafka topic
+/usr/local/kafka/bin/kafka-topics.sh --create --zookeeper localhost:2181 --replication-factor 1 --partitions 1 --topic Venmo-Transactions-Dev
+
 # To view Kafka topic contents
 /usr/local/kafka/bin/kafka-console-consumer.sh --zookeeper localhost:2181 --topic Venmo-Transactions-Test
 
@@ -15,7 +18,7 @@ sudo $SPARK_HOME/bin/spark-submit --packages org.apache.spark:spark-streaming-ka
 # To run Spark Stream with Kafka consumer (cluster)
 spark-submit --packages org.apache.spark:spark-streaming-kafka-0-8_2.11:2.1.0 kafka-spark-test.py
 
-# To start DynamoDB locally
+# To start DynamoDB locally (view table at http://localhost:8000/shell/)
 java -Djava.library.path=./DynamoDBLocal_lib -jar DynamoDBLocal.jar -sharedDb
 
 # To start Redis (can only do on cluster)

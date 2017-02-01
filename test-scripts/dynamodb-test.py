@@ -19,7 +19,7 @@ table = dynamodb.Table('venmo-graph-analytics-test')
 # Query an item
 response = table.get_item(
     Key={
-        'username': 'jgavris',
+        'username': 'yaanik',
     }
 )
 

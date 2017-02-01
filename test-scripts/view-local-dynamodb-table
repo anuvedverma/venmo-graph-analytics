@@ -2,7 +2,7 @@ var dynamodb = new AWS.DynamoDB({
 region: 'us-east-1',
 endpoint: "http://localhost:8000"
 });
-var tableName = "venmo-graph-analytics-test";
+var tableName = "venmo-graph-analytics-dev";
 
 var params = {
 TableName: tableName,
