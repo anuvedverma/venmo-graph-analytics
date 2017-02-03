@@ -9,9 +9,16 @@ from pyspark.streaming.kafka import KafkaUtils
 from botocore.exceptions import ClientError
 import boto3
 import redis
+import pickle
+import numpy as np
 import random
 import json
 
+
+EDGE_RES_SIZE = 2000
+WEDGE_RES_SIZE = 2000
+COUNT = 0
+TOT_WEDGES = 0
 
 # Extract relevant data from json body
 def extract_data(json_body):
@@ -39,6 +46,16 @@ def extract_data(json_body):
         from_username = 'N/A'
     if not to_username:
         to_username = 'N/A'
+
+    if not from_firstname:
+        from_firstname = 'N/A'
+    if not to_firstname:
+        to_firstname = 'N/A'
+
+    if not from_lastname:
+        from_lastname = 'N/A'
+    if not to_lastname:
+        to_lastname = 'N/A'
 
     # Output data dictionary
     data = {'from_id': int(from_id),
@@ -189,6 +206,94 @@ def update_dynamodb(table, data_dict):
         create_item(table, receiver_data)
 
 
+def get_wedge(edge1, edge2):
+    if edge1[0] == edge2[0]:
+        return tuple((edge2[1], edge1[0], edge1[1]))
+    if edge1[0] == edge2[1]:
+        return tuple((edge2[0], edge1[0], edge1[1]))
+    if edge1[1] == edge2[0]:
+        return tuple((edge2[1], edge1[1], edge1[0]))
+    if edge1[1] == edge2[1]:
+        return tuple((edge2[0], edge1[1], edge1[0]))
+    return None
+
+
+def is_closed_by(wedge, edge):
+    if (wedge[0] == edge[0] and wedge[2] == edge[1]) or (wedge[0] == edge[1] and wedge[2] == edge[0]):
+        return True
+    return False
+
+
+def creates_wedge(edge1, edge2):
+    if edge1[0] == edge2[0] and edge1[1] != edge2[1]:
+        return True
+    if edge1[0] == edge2[1] and edge1[1] != edge2[0]:
+        return True
+    if edge1[1] == edge2[1] and edge1[0] != edge2[0]:
+        return True
+    if edge1[1] == edge2[0] and edge1[0] != edge2[1]:
+        return True
+    return False
+
+
+def update(redis_db, new_edge):
+    global EDGE_RES_SIZE
+    global WEDGE_RES_SIZE
+    global COUNT
+    global TOT_WEDGES
+
+    COUNT += 1
+
+    edge_res = pickle.loads(redis_db.get('edge_res'))
+    wedge_res = pickle.loads(redis_db.get('wedge_res'))
+    is_closed = pickle.loads(redis_db.get('is_closed'))
+    updated_edge_res = False
+    # print(edge_res)
+    # print(wedge_res)
+    # print(is_closed)
+
+    for i in range(len(wedge_res)):
+        if is_closed_by(wedge_res[i], new_edge):
+            is_closed[i] = True
+    for i in range(len(edge_res)):
+        x = random.uniform(0, 1)
+        if x < (1 / float(COUNT)):
+            edge_res[i] = new_edge
+            updated_edge_res = True
+    if updated_edge_res:
+        new_wedges = []
+        for i in range(len(edge_res)):
+            if creates_wedge(edge_res[i], new_edge):
+                new_wedges.append(get_wedge(edge_res[i], new_edge))
+        TOT_WEDGES += len(new_wedges)
+        for i in range(len(wedge_res)):
+            x = random.uniform(0, 1)
+            if TOT_WEDGES > 0 and x < (len(new_wedges) / float(TOT_WEDGES)):
+                w = random.choice(new_wedges)
+                wedge_res[i] = w
+                is_closed[i] = False
+
+    pickled_edge_res = pickle.dumps(edge_res)
+    redis_db.set('edge_res', pickled_edge_res)
+    pickled_wedge_res = pickle.dumps(wedge_res)
+    redis_db.set('wedge_res', pickled_wedge_res)
+    pickled_is_closed = pickle.dumps(is_closed)
+    redis_db.set('is_closed', pickled_is_closed)
+
+    # print(edge_res)
+    # print(wedge_res)
+    # print(is_closed)
+
+    return np.sum(is_closed) / float(len(is_closed))
+
+
+def streaming_triangles(redis_db, new_edge):
+    k = update(redis_db, new_edge)
+    # print(tot_wedges)
+    transitivity = 3*k
+    redis_db.set('transitivity', transitivity)
+
+
 # Send data to DynamoDB/Redis databases
 def send_partition(iter):
     # DynomoDB connection
@@ -204,6 +309,24 @@ def send_partition(iter):
     redis_server = 'ec2-52-33-8-227.us-west-2.compute.amazonaws.com' # Set Redis connection (local)
     # redis_server = 'localhost' # Set Redis connection (cluster)
     redis_db = redis.StrictRedis(host=redis_server, port=6379, db=0)
+
+    # Init edge/wedge reservoirs
+    edge_res_size = 2000
+    wedge_res_size = 2000
+
+    global EDGE_RES_SIZE
+    global WEDGE_RES_SIZE
+    edge_res = [list(tuple((0, 0))) for _ in xrange(EDGE_RES_SIZE)]
+    pickled_edge_res = pickle.dumps(edge_res)
+    redis_db.set('edge_res', pickled_edge_res)
+
+    wedge_res = [list(tuple((0, 0, 0))) for _ in xrange(WEDGE_RES_SIZE)]
+    pickled_wedge_res = pickle.dumps(wedge_res)
+    redis_db.set('wedge_res', pickled_wedge_res)
+
+    is_closed = [False for _ in xrange(WEDGE_RES_SIZE)]
+    pickled_is_closed = pickle.dumps(is_closed)
+    redis_db.set('is_closed', pickled_is_closed)
 
     # Route stream data to appropriate databases
     for record in iter:
@@ -226,8 +349,11 @@ def send_partition(iter):
                          "num_transactions": response['Item']['num_transactions']}
         print("Successfully put " + str(json_response) + " into DynamoDB")
 
-        # Run streaming-triangles algorithm
-        streaming_triangles(redis_db, record, 20000, 20000)
+        # Run approximate transitivity algorithm
+        node1 = int(response['Item']['id'])
+        node2 = int(response['Item']['id'])
+        new_edge = tuple((node1, node2))
+        streaming_triangles(redis_db, new_edge)
 
 #        redis_db.set(response['Item']['username'], response['Item']['message'])
 
@@ -236,17 +362,6 @@ def send_partition(iter):
     # return to the pool for future reuse
     # ConnectionPool.returnConnection(connection)
 
-
-def streaming_triangles(redis_db, record, res_edge_size, res_wedge_size):
-    pass
-
-
-def update(redis_db, new_edge, res_edge_size, res_wedge_size):
-    pass
-
-
-def read_redis(redis_db, key):
-    return str(redis_db.get(key))
 
 # To Run:
 # sudo $SPARK_HOME/bin/spark-submit --packages org.apache.spark:spark-streaming-kafka-0-8_2.11:2.1.0 kafka-spark-test.py

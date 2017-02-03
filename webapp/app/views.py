@@ -6,6 +6,7 @@ from flask import render_template
 from flask import request
 import sys
 import json
+import redis
 import boto3
 
 dynamodb = boto3.resource('dynamodb',
@@ -16,6 +17,9 @@ dynamodb = boto3.resource('dynamodb',
 
 dynamo_table = dynamodb.Table('venmo-graph-analytics-dev')  # Set DynamoDB table
 
+redis_server = 'ec2-52-33-8-227.us-west-2.compute.amazonaws.com'
+    # redis_server = 'localhost'
+redis_db = redis.StrictRedis(host=redis_server, port=6379, db=0)
 
 @app.route('/')
 @app.route('/index')
@@ -47,6 +51,8 @@ def username_post():
     yellows = response['Item']['yellow_neighbors']
     greens = response['Item']['green_neighbors']
     blacks = response['Item']['black_neighbors']
+
+    transitivity = redis_db.get('transitivity')
 
     user = response['Item']['id']
     red_neighbors = set([x for x in reds if x is not None])
@@ -82,6 +88,7 @@ def username_post():
                      "yellow_edges": yellow_edges,
                      "green_edges": green_edges,
                      "black_edges": black_edges,
+                     "transitivity": transitivity,
                      }
     return render_template("userinfo.html", output=response_dict)
 
