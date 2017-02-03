@@ -7,16 +7,16 @@
 /usr/local/kafka/bin/kafka-topics.sh --create --zookeeper localhost:2181 --replication-factor 1 --partitions 1 --topic Venmo-Transactions-Dev
 
 # To view Kafka topic contents
-/usr/local/kafka/bin/kafka-console-consumer.sh --zookeeper localhost:2181 --topic Venmo-Transactions-Test
+/usr/local/kafka/bin/kafka-console-consumer.sh --zookeeper localhost:2181 --topic Venmo-Transactions-Dev
 
 # To view Kafka topic contents from beginning
-/usr/local/kafka/bin/kafka-console-consumer.sh --zookeeper localhost:2181 --from-beginning --topic Venmo-Transactions-Test
+/usr/local/kafka/bin/kafka-console-consumer.sh --zookeeper localhost:2181 --from-beginning --topic Venmo-Transactions-Dev
 
 # To run Spark Stream with Kafka consumer (local)
-sudo $SPARK_HOME/bin/spark-submit --packages org.apache.spark:spark-streaming-kafka-0-8_2.11:2.1.0 kafka-spark-test.py
+sudo $SPARK_HOME/bin/spark-submit --packages org.apache.spark:spark-streaming-kafka-0-8_2.11:2.1.0 dev-scripts/kafka-spark-dev.py
 
 # To run Spark Stream with Kafka consumer (cluster)
-spark-submit --packages org.apache.spark:spark-streaming-kafka-0-8_2.11:2.1.0 kafka-spark-test.py
+spark-submit --packages org.apache.spark:spark-streaming-kafka-0-8_2.11:2.1.0 dev-scripts/kafka-spark-dev.py
 
 # To start DynamoDB locally (view table at http://localhost:8000/shell/)
 java -Djava.library.path=./DynamoDBLocal_lib -jar DynamoDBLocal.jar -sharedDb

@@ -3,8 +3,8 @@ import boto3
 # Get the service resource.
 dynamodb = boto3.resource('dynamodb', endpoint_url='http://localhost:8000')
 
-# table = dynamodb.Table('venmo-graph-analytics-dev')
-# table.delete()
+table = dynamodb.Table('venmo-graph-analytics-dev')
+table.delete()
 
 # Create the DynamoDB table.
 table = dynamodb.create_table(

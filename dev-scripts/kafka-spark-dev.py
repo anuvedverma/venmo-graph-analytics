@@ -6,9 +6,11 @@ from pyspark import SparkContext
 from pyspark import SparkConf
 from pyspark.streaming import StreamingContext
 from pyspark.streaming.kafka import KafkaUtils
-import json
+from botocore.exceptions import ClientError
 import boto3
 import redis
+import random
+import json
 
 
 # Extract relevant data from json body
@@ -16,13 +18,15 @@ def extract_data(json_body):
 
     # Sender data
     from_id = json_body['actor']['id']
-    from_name = json_body['actor']['name']
+    from_firstname = json_body['actor']['firstname']
+    from_lastname = json_body['actor']['lastname']
     from_username = json_body['actor']['username']
     from_picture = json_body['actor']['picture']
 
     # Receiver data
     to_id = json_body['transactions'][0]['target']['id']
-    to_name = json_body['transactions'][0]['target']['name']
+    to_firstname = json_body['transactions'][0]['target']['firstname']
+    to_lastname = json_body['transactions'][0]['target']['lastname']
     to_username = json_body['transactions'][0]['target']['username']
     to_picture = json_body['transactions'][0]['target']['picture']
 
@@ -30,20 +34,162 @@ def extract_data(json_body):
     message = json_body['message']
     timestamp = json_body['created_time']
 
+    # Filter out invalid values
+    if not from_username:
+        from_username = 'N/A'
+    if not to_username:
+        to_username = 'N/A'
+
     # Output data dictionary
-    data = {'from_id' : from_id,
-            'from_name' : from_name,
-            'from_username' : from_username,
-            'from_picture' : from_picture,
-            'to_id' : to_id,
-            'to_name' : to_name,
-            'to_username' : to_username,
-            'to_picture' : to_picture,
-            'message' : message,
+    data = {'from_id': int(from_id),
+            'from_firstname': from_firstname,
+            'from_lastname': from_lastname,
+            'from_username': from_username,
+            'from_picture': from_picture,
+            'to_id': int(to_id),
+            'to_firstname': to_firstname,
+            'to_lastname': to_lastname,
+            'to_username': to_username,
+            'to_picture': to_picture,
+            'message': message,
             'timestamp': timestamp}
     return data
 
-# Send data to DynamoDB
+
+def analyze_message(message, neighbor):
+    color_map = {}
+    # Insert real analysis here
+    if random.uniform(0, 1) < 0.75:
+        color_map['red'] = neighbor
+    else: color_map['red'] = None
+
+    if random.uniform(0, 1) < 0.25:
+        color_map['blue'] = neighbor
+    else: color_map['blue'] = None
+
+    if random.uniform(0, 1) < 0.5:
+        color_map['yellow'] = neighbor
+    else: color_map['yellow'] = None
+
+    if random.uniform(0, 1) < 0.1:
+        color_map['green'] = neighbor
+    else: color_map['green'] = None
+
+    if random.uniform(0, 1) < 0.33:
+        color_map['black'] = neighbor
+    else: color_map['black'] = None
+
+
+    # Update color_map based on analysis results
+    output = {'red': color_map['red'],
+              'blue': color_map['blue'],
+              'yellow': color_map['yellow'],
+              'green': color_map['green'],
+              'black': color_map['black']}
+    return output
+
+
+# Create an item
+def create_item(table, data):
+    table.put_item(
+       Item={
+           'id': data['id'],
+           'username': data['username'],
+           'firstname': data['firstname'],
+           'lastname': data['lastname'],
+           'picture': data['picture'],
+           'red_neighbors': [data['red_neighbor']],
+           'blue_neighbors': [data['blue_neighbor']],
+           'yellow_neighbors': [data['yellow_neighbor']],
+           'green_neighbors': [data['green_neighbor']],
+           'black_neighbors': [data['black_neighbor']],
+           # 'red': int(data['color'] == 'red'),
+           # 'blue': int(data['color'] == 'blue'),
+           # 'yellow': int(data['color'] == 'yellow'),
+           # 'green': int(data['color'] == 'green'),
+           # 'black': int(data['color'] == 'black'),
+           'num_transactions': 1
+       }
+    )
+
+
+# Update an existing item
+def update_item(table, data):
+    table.update_item(
+        Key={
+            'id': data['id']
+        },
+        UpdateExpression='SET num_transactions = num_transactions + :inc,' +
+                            # data['color'] + ' = ' + data['color'] + ' + :inc,' +
+                         '''username = :username,
+                            firstname = :firstname,
+                            lastname = :lastname,
+                            picture = :picture,
+                            red_neighbors = list_append(red_neighbors, :red_neighbor),
+                            blue_neighbors = list_append(blue_neighbors, :blue_neighbor),
+                            yellow_neighbors = list_append(yellow_neighbors, :yellow_neighbor),
+                            green_neighbors = list_append(green_neighbors, :green_neighbor),
+                            black_neighbors = list_append(black_neighbors, :black_neighbor)''',
+
+        ExpressionAttributeValues={
+            ':username': data['username'],
+            ':firstname': data['firstname'],
+            ':lastname': data['lastname'],
+            ':picture': data['picture'],
+            ':red_neighbor': [data['red_neighbor']],
+            ':blue_neighbor': [data['blue_neighbor']],
+            ':yellow_neighbor': [data['yellow_neighbor']],
+            ':green_neighbor': [data['green_neighbor']],
+            ':black_neighbor': [data['black_neighbor']],
+            ':inc': 1
+        }
+    )
+
+
+# Update DynamoDB according to new transaction data
+def update_dynamodb(table, data_dict):
+    # Sender data
+    message = data_dict['message']
+    color_map = analyze_message(message, data_dict['to_id'])
+    sender_data = {'id': data_dict['from_id'],
+                   'username': data_dict['from_username'],
+                   'firstname': data_dict['from_firstname'],
+                   'lastname': data_dict['from_lastname'],
+                   'picture': data_dict['from_picture'],
+                   'red_neighbor': color_map['red'],
+                   'blue_neighbor': color_map['blue'],
+                   'yellow_neighbor': color_map['yellow'],
+                   'green_neighbor': color_map['green'],
+                   'black_neighbor': color_map['black']}
+    try:
+        update_item(table, sender_data)
+    except ClientError as e:
+        print(e.response['Error']['Message'])
+        # print(e.response)
+        create_item(table, sender_data)
+
+    # Receiver data
+    message = data_dict['message']
+    color_map = analyze_message(message, data_dict['from_id'])
+    receiver_data = {'id': data_dict['to_id'],
+                     'username': data_dict['to_username'],
+                     'firstname': data_dict['to_firstname'],
+                     'lastname': data_dict['to_lastname'],
+                     'picture': data_dict['to_picture'],
+                     'red_neighbor': color_map['red'],
+                     'blue_neighbor': color_map['blue'],
+                     'yellow_neighbor': color_map['yellow'],
+                     'green_neighbor': color_map['green'],
+                     'black_neighbor': color_map['black']}
+    try:
+        update_item(table, receiver_data)
+    except ClientError as e:
+        print(e.response['Error']['Message'])
+        # print(e.response)
+        create_item(table, receiver_data)
+
+
+# Send data to DynamoDB/Redis databases
 def send_partition(iter):
     # DynomoDB connection
     dynamodb = boto3.resource('dynamodb',
@@ -55,25 +201,33 @@ def send_partition(iter):
     dynamo_table = dynamodb.Table('venmo-graph-analytics-dev')  # Set DynamoDB table
 
     # Redis connection
-    redis_server = 'ec2-52-33-8-227.us-west-2.compute.amazonaws.com'
-    # redis_server = 'localhost'
+    redis_server = 'ec2-52-33-8-227.us-west-2.compute.amazonaws.com' # Set Redis connection (local)
+    # redis_server = 'localhost' # Set Redis connection (cluster)
     redis_db = redis.StrictRedis(host=redis_server, port=6379, db=0)
 
     # Route stream data to appropriate databases
     for record in iter:
         print("Sending partition...")
-        dynamo_table.update_item(
-            Key={
-                'id': record['from_id']
-            },
-            UpdateExpression=''
-        )
-        # Getting an item
-        response = dynamo_table.get_item(Key={'username': record['username']})
-        json_response = {"name": response['Item']['name'], "username": response['Item']['username'],
-                         "message": response['Item']['message']}
+
+        # Update DynamoDB with new record
+        update_dynamodb(dynamo_table, record)
+
+        response = dynamo_table.get_item(Key={'id': record['from_id']}) # check to_user data
+        json_response = {"firstname": response['Item']['firstname'],
+                         "lastname": response['Item']['lastname'],
+                         "username": response['Item']['username'],
+                         "num_transactions": response['Item']['num_transactions']}
         print("Successfully put " + str(json_response) + " into DynamoDB")
 
+        response = dynamo_table.get_item(Key={'id': record['to_id']}) # check from_user data
+        json_response = {"firstname": response['Item']['firstname'],
+                         "lastname": response['Item']['lastname'],
+                         "username": response['Item']['username'],
+                         "num_transactions": response['Item']['num_transactions']}
+        print("Successfully put " + str(json_response) + " into DynamoDB")
+
+        # Run streaming-triangles algorithm
+        streaming_triangles(redis_db, record, 20000, 20000)
 
 #        redis_db.set(response['Item']['username'], response['Item']['message'])
 
@@ -82,21 +236,17 @@ def send_partition(iter):
     # return to the pool for future reuse
     # ConnectionPool.returnConnection(connection)
 
+
+def streaming_triangles(redis_db, record, res_edge_size, res_wedge_size):
+    pass
+
+
+def update(redis_db, new_edge, res_edge_size, res_wedge_size):
+    pass
+
+
 def read_redis(redis_db, key):
     return str(redis_db.get(key))
-
-# Update DynamoDB according to new transaction data
-def update_dynamodb(table, data_dict):
-    # Creating an item
-    table.put_item(
-       Item={
-            'username': data_dict['username'],
-            'name': data_dict['name'],
-            'message': data_dict['message'],
-        }
-    )
-    return data_dict
-
 
 # To Run:
 # sudo $SPARK_HOME/bin/spark-submit --packages org.apache.spark:spark-streaming-kafka-0-8_2.11:2.1.0 kafka-spark-test.py

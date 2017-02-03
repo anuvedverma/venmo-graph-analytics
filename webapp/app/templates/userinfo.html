@@ -2,26 +2,62 @@
 {% block userinfo %}
 <div class="container">
     <div class="starter-template">
-        <div class="row" style="height:100vh;">
+        <div class="row" style="height:50vh;">
             <div class="col-md-10 col-md-offset-1">
                 <table class="table">
                     <thead>
                     <tr>
                         <th>Name</th>
                         <th>Username</th>
-                        <th>Message</th>
+                        <th>Red Transactions</th>
+                        <th>Blue Transactions</th>
+                        <th>Yellow Transactions</th>
+                        <th>Green Transactions</th>
+                        <th>Black Transactions</th>
+                        <th>Number of Transactions</th>
                     </tr>
                     </thead>
                     <tbody>
                     <tr>
-                        <td>{{output.name}}</td>
+                        <td>{{output.firstname}} {{output.lastname}}</td>
                         <td>{{output.username}}</td>
-                        <td>{{output.message}}</td>
+                        <td>{{output.ratio_reds}}</td>
+                        <td>{{output.ratio_blues}}</td>
+                        <td>{{output.ratio_yellows}}</td>
+                        <td>{{output.ratio_greens}}</td>
+                        <td>{{output.ratio_blacks}}</td>
+                        <td>{{output.num_transactions}}</td>
                     </tr>
                     </tbody>
                 </table>
             </div>
         </div>
+
+        <div class="row" style="height:10vh;">
+            <div class="col-md-10 col-md-offset-1">
+                <table class="table">
+                    <thead>
+                    <tr>
+                        <th>Red Neighbors</th>
+                        <th>Blue Neighbors</th>
+                        <th>Yellow Neighbors</th>
+                        <th>Green Neighbors</th>
+                        <th>Black Neighbors</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr>
+                        <td>{{output.red_edges}}</td>
+                        <td>{{output.blue_edges}}</td>
+                        <td>{{output.yellow_edges}}</td>
+                        <td>{{output.green_edges}}</td>
+                        <td>{{output.black_edges}}</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
     </div>
 </div>
 {% endblock %}
