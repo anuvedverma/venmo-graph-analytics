@@ -29,14 +29,34 @@ def index():
     # return render_template("index.html", title='Home', list=mylist, )
     return render_template("index.html", title='Home', user=user)
 
+@app.route('/communityinfo')
+def community_info():
+    red_transitivity = redis_db.get('red_transitivity')
+    blue_transitivity = redis_db.get('blue_transitivity')
+    yellow_transitivity = redis_db.get('yellow_transitivity')
+    green_transitivity = redis_db.get('green_transitivity')
+    black_transitivity = redis_db.get('black_transitivity')
+    num_triangles = redis_db.get('num_triangles')
+
+    # print("Query result: " + response)
+    response_dict = {"red_transitivity": red_transitivity,
+                     "blue_transitivity": blue_transitivity,
+                     "yellow_transitivity": yellow_transitivity,
+                     "green_transitivity": green_transitivity,
+                     "black_transitivity": black_transitivity,
+                     "num_triangles": num_triangles}
+
+    return render_template("communityinfo.html", output=response_dict)
+
+
 @app.route('/usersearch')
-def usersearch():
+def user_search():
     return render_template("usersearch.html")
 
 @app.route("/usersearch", methods=['POST'])
 def username_post():
-    # username = request.form["username"]
-    id = request.form["username"]
+    username = request.form["username"]
+    id = redis_db.get(username)
     print("Received request: " + id)
 
     response = dynamo_table.get_item(
@@ -51,9 +71,6 @@ def username_post():
     yellows = response['Item']['yellow_neighbors']
     greens = response['Item']['green_neighbors']
     blacks = response['Item']['black_neighbors']
-
-    transitivity = redis_db.get('transitivity')
-    total_wedges = redis_db.get('total_wedges')
 
     user = response['Item']['id']
     red_neighbors = set([x for x in reds if x is not None])
@@ -89,8 +106,6 @@ def username_post():
                      "yellow_edges": yellow_edges,
                      "green_edges": green_edges,
                      "black_edges": black_edges,
-                     "transitivity": transitivity,
-                     "total_wedges": total_wedges,
                      }
     return render_template("userinfo.html", output=response_dict)
 

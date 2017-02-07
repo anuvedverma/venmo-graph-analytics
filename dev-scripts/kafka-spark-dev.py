@@ -15,14 +15,12 @@ import random
 import json
 
 
-EDGE_RES_SIZE = 100
-WEDGE_RES_SIZE = 100
-count_broadcast = 27
+# EDGE_RES_SIZE = 100
+# WEDGE_RES_SIZE = 100
+# count_broadcast = 27
 
 # Extract relevant data from json body
 def extract_data(json_body):
-
-    print("LOOK HERE: " + str(json_body))
 
     # Sender data
     from_id = json_body['actor']['id']
@@ -97,7 +95,6 @@ def analyze_message(message, neighbor):
         color_map['black'] = neighbor
     else: color_map['black'] = None
 
-
     # Update color_map based on analysis results
     output = {'red': color_map['red'],
               'blue': color_map['blue'],
@@ -121,11 +118,6 @@ def create_item(table, data):
            'yellow_neighbors': [data['yellow_neighbor']],
            'green_neighbors': [data['green_neighbor']],
            'black_neighbors': [data['black_neighbor']],
-           # 'red': int(data['color'] == 'red'),
-           # 'blue': int(data['color'] == 'blue'),
-           # 'yellow': int(data['color'] == 'yellow'),
-           # 'green': int(data['color'] == 'green'),
-           # 'black': int(data['color'] == 'black'),
            'num_transactions': 1
        }
     )
@@ -207,105 +199,104 @@ def update_dynamodb(table, data_dict):
         create_item(table, receiver_data)
 
 
-def get_wedge(edge1, edge2):
-    if edge1[0] == edge2[0]:
-        return tuple((edge2[1], edge1[0], edge1[1]))
-    if edge1[0] == edge2[1]:
-        return tuple((edge2[0], edge1[0], edge1[1]))
-    if edge1[1] == edge2[0]:
-        return tuple((edge2[1], edge1[1], edge1[0]))
-    if edge1[1] == edge2[1]:
-        return tuple((edge2[0], edge1[1], edge1[0]))
-    return None
-
-
-def is_closed_by(wedge, edge):
-    if (wedge[0] == edge[0] and wedge[2] == edge[1]) or (wedge[0] == edge[1] and wedge[2] == edge[0]):
-        return True
-    return False
-
-
-def creates_wedge(edge1, edge2):
-    if edge1[0] == edge2[0] and edge1[1] != edge2[1]:
-        return True
-    if edge1[0] == edge2[1] and edge1[1] != edge2[0]:
-        return True
-    if edge1[1] == edge2[1] and edge1[0] != edge2[0]:
-        return True
-    if edge1[1] == edge2[0] and edge1[0] != edge2[1]:
-        return True
-    return False
-
-
-def update(redis_db, new_edge):
-
-    edge_count = int(redis_db.get('edge_count'))
-    total_wedges = int(redis_db.get('total_wedges'))
-
-    edge_count += 1
-    print("EDGE COUNT: " + str(edge_count))
-
-    edge_res = pickle.loads(redis_db.get('edge_res'))
-    wedge_res = pickle.loads(redis_db.get('wedge_res'))
-    is_closed = pickle.loads(redis_db.get('is_closed'))
-    updated_edge_res = False
-
-    print(edge_res)
-    print(wedge_res)
-    print(is_closed)
-
-    for i in range(len(wedge_res)):
-        if is_closed_by(wedge_res[i], new_edge):
-            is_closed[i] = True
-    for i in range(len(edge_res)):
-        x = random.uniform(0, 1)
-        if x < (1 / float(edge_count)):
-            edge_res[i] = new_edge
-            updated_edge_res = True
-    if updated_edge_res:
-        new_wedges = []
-        for i in range(len(edge_res)):
-            if creates_wedge(edge_res[i], new_edge):
-                new_wedges.append(get_wedge(edge_res[i], new_edge))
-        total_wedges += len(new_wedges)
-        for i in range(len(wedge_res)):
-            x = random.uniform(0, 1)
-            if total_wedges > 0 and x < (len(new_wedges) / float(total_wedges)):
-                w = random.choice(new_wedges)
-                wedge_res[i] = w
-                is_closed[i] = False
-
-    print("TOTAL WEDGES COUNT: " + str(total_wedges))
-    pickled_edge_res = pickle.dumps(edge_res)
-    redis_db.set('edge_res', pickled_edge_res)
-    pickled_wedge_res = pickle.dumps(wedge_res)
-    redis_db.set('wedge_res', pickled_wedge_res)
-    pickled_is_closed = pickle.dumps(is_closed)
-    redis_db.set('is_closed', pickled_is_closed)
-
-    redis_db.incr('edge_count')
-    redis_db.set('total_wedges', total_wedges)
-
-
-    # print(edge_res)
-    # print(wedge_res)
-    # print(is_closed)
-
-    return np.sum(is_closed) / float(len(is_closed))
-
-
-def streaming_triangles(redis_db, new_edge):
-    k = update(redis_db, new_edge)
-    # print(tot_wedges)
-    transitivity = 3*k
-    print("TOTAL WEDGES: " + str(redis_db.get('total_wedges')))
-    redis_db.set('transitivity', transitivity)
-    # redis_db.set('total_wedges', redis_db.get('tot_wedges'))
+# def get_wedge(edge1, edge2):
+#     if edge1[0] == edge2[0]:
+#         return tuple((edge2[1], edge1[0], edge1[1]))
+#     if edge1[0] == edge2[1]:
+#         return tuple((edge2[0], edge1[0], edge1[1]))
+#     if edge1[1] == edge2[0]:
+#         return tuple((edge2[1], edge1[1], edge1[0]))
+#     if edge1[1] == edge2[1]:
+#         return tuple((edge2[0], edge1[1], edge1[0]))
+#     return None
+#
+#
+# def is_closed_by(wedge, edge):
+#     if (wedge[0] == edge[0] and wedge[2] == edge[1]) or (wedge[0] == edge[1] and wedge[2] == edge[0]):
+#         return True
+#     return False
+#
+#
+# def creates_wedge(edge1, edge2):
+#     if edge1[0] == edge2[0] and edge1[1] != edge2[1]:
+#         return True
+#     if edge1[0] == edge2[1] and edge1[1] != edge2[0]:
+#         return True
+#     if edge1[1] == edge2[1] and edge1[0] != edge2[0]:
+#         return True
+#     if edge1[1] == edge2[0] and edge1[0] != edge2[1]:
+#         return True
+#     return False
+#
+#
+# def update(redis_db, new_edge):
+#
+#     edge_count = int(redis_db.get('edge_count'))
+#     total_wedges = int(redis_db.get('total_wedges'))
+#
+#     edge_count += 1
+#     print("EDGE COUNT: " + str(edge_count))
+#
+#     edge_res = pickle.loads(redis_db.get('edge_res'))
+#     wedge_res = pickle.loads(redis_db.get('wedge_res'))
+#     is_closed = pickle.loads(redis_db.get('is_closed'))
+#     updated_edge_res = False
+#
+#     print(edge_res)
+#     print(wedge_res)
+#     print(is_closed)
+#
+#     for i in range(len(wedge_res)):
+#         if is_closed_by(wedge_res[i], new_edge):
+#             is_closed[i] = True
+#     for i in range(len(edge_res)):
+#         x = random.uniform(0, 1)
+#         if x < (1 / float(edge_count)):
+#             edge_res[i] = new_edge
+#             updated_edge_res = True
+#     if updated_edge_res:
+#         new_wedges = []
+#         for i in range(len(edge_res)):
+#             if creates_wedge(edge_res[i], new_edge):
+#                 new_wedges.append(get_wedge(edge_res[i], new_edge))
+#         total_wedges += len(new_wedges)
+#         for i in range(len(wedge_res)):
+#             x = random.uniform(0, 1)
+#             if total_wedges > 0 and x < (len(new_wedges) / float(total_wedges)):
+#                 w = random.choice(new_wedges)
+#                 wedge_res[i] = w
+#                 is_closed[i] = False
+#
+#     print("TOTAL WEDGES COUNT: " + str(total_wedges))
+#     pickled_edge_res = pickle.dumps(edge_res)
+#     redis_db.set('edge_res', pickled_edge_res)
+#     pickled_wedge_res = pickle.dumps(wedge_res)
+#     redis_db.set('wedge_res', pickled_wedge_res)
+#     pickled_is_closed = pickle.dumps(is_closed)
+#     redis_db.set('is_closed', pickled_is_closed)
+#
+#     redis_db.incr('edge_count')
+#     redis_db.set('total_wedges', total_wedges)
+#
+#
+#     # print(edge_res)
+#     # print(wedge_res)
+#     # print(is_closed)
+#
+#     return np.sum(is_closed) / float(len(is_closed))
+#
+#
+# def streaming_triangles(redis_db, new_edge):
+#     k = update(redis_db, new_edge)
+#     # print(tot_wedges)
+#     transitivity = 3*k
+#     print("TOTAL WEDGES: " + str(redis_db.get('total_wedges')))
+#     redis_db.set('transitivity', transitivity)
+#     # redis_db.set('total_wedges', redis_db.get('tot_wedges'))
 
 
 # Send data to DynamoDB/Redis databases
 def send_partition(rdd):
-    global count_broadcast
 
     # DynomoDB connection
     dynamodb = boto3.resource('dynamodb',
@@ -322,29 +313,26 @@ def send_partition(rdd):
     redis_db = redis.StrictRedis(host=redis_server, port=6379, db=0)
 
     # Init edge/wedge reservoirs
-    global EDGE_RES_SIZE
-    global WEDGE_RES_SIZE
-    edge_res = [list(tuple((0, 0))) for _ in xrange(EDGE_RES_SIZE)]
-    pickled_edge_res = pickle.dumps(edge_res)
-    redis_db.set('edge_res', pickled_edge_res)
-
-    wedge_res = [list(tuple((0, 0, 0))) for _ in xrange(WEDGE_RES_SIZE)]
-    pickled_wedge_res = pickle.dumps(wedge_res)
-    redis_db.set('wedge_res', pickled_wedge_res)
-
-    is_closed = [False for _ in xrange(WEDGE_RES_SIZE)]
-    pickled_is_closed = pickle.dumps(is_closed)
-    redis_db.set('is_closed', pickled_is_closed)
-
-    redis_db.set('edge_count', 0)
-    redis_db.set('total_wedges', 0)
+    # global EDGE_RES_SIZE
+    # global WEDGE_RES_SIZE
+    # edge_res = [list(tuple((0, 0))) for _ in xrange(EDGE_RES_SIZE)]
+    # pickled_edge_res = pickle.dumps(edge_res)
+    # redis_db.set('edge_res', pickled_edge_res)
+    #
+    # wedge_res = [list(tuple((0, 0, 0))) for _ in xrange(WEDGE_RES_SIZE)]
+    # pickled_wedge_res = pickle.dumps(wedge_res)
+    # redis_db.set('wedge_res', pickled_wedge_res)
+    #
+    # is_closed = [False for _ in xrange(WEDGE_RES_SIZE)]
+    # pickled_is_closed = pickle.dumps(is_closed)
+    # redis_db.set('is_closed', pickled_is_closed)
+    #
+    # redis_db.set('edge_count', 0)
+    # redis_db.set('total_wedges', 0)
 
     # Route stream data to appropriate databases
-    print(str(rdd))
+    # print(str(rdd))
     for record in rdd:
-        # count_broadcast += 1
-        # print(str(record))
-        print("COUNT: " + str(count_broadcast))
         print("Sending partition...")
 
         # Update DynamoDB with new record
@@ -356,7 +344,8 @@ def send_partition(rdd):
                          "lastname": response['Item']['lastname'],
                          "username": response['Item']['username'],
                          "num_transactions": response['Item']['num_transactions']}
-        print("Successfully put " + str(json_response) + " into DynamoDB")
+        redis_db.set(response['Item']['username'], response['Item']['id'])
+        print("Successfully put " + str(json_response) + " into DynamoDB and Redis")
 
         response = dynamo_table.get_item(Key={'id': record['to_id']}) # check from_user data
         json_response = {"id": response['Item']['id'],
@@ -364,21 +353,15 @@ def send_partition(rdd):
                          "lastname": response['Item']['lastname'],
                          "username": response['Item']['username'],
                          "num_transactions": response['Item']['num_transactions']}
-        print("Successfully put " + str(json_response) + " into DynamoDB")
+        redis_db.set(response['Item']['username'], response['Item']['id'])
+        print("Successfully put " + str(json_response) + " into DynamoDB and Redis")
 
-        # Run approximate transitivity algorithm
-        node1 = int(response['Item']['id'])
-        node2 = int(response['Item']['id'])
-        new_edge = tuple((node1, node2))
-        streaming_triangles(redis_db, new_edge)
-        print("Successfully processed edge (" + str(node1) + ", " + str(node2) + ") into Redis")
-
-#        redis_db.set(response['Item']['username'], response['Item']['message'])
-
-#        username = response['Item']['username']
-#        print("Successfully put " + read_redis(redis_db, username) + " into Redis")
-    # return to the pool for future reuse
-    # ConnectionPool.returnConnection(connection)
+        # # Run approximate transitivity algorithm
+        # node1 = int(response['Item']['id'])
+        # node2 = int(response['Item']['id'])
+        # new_edge = tuple((node1, node2))
+        # streaming_triangles(redis_db, new_edge)
+        # print("Successfully processed edge (" + str(node1) + ", " + str(node2) + ") into Redis")
 
 
 # To Run:
@@ -395,7 +378,6 @@ if __name__ == "__main__":
     # Set up resources
     ssc = StreamingContext(sc, 1)   # Set Spark Streaming context
 
-
     # brokers = "ec2-50-112-19-115.us-west-2.compute.amazonaws.com:9092,ec2-52-33-162-7.us-west-2.compute.amazonaws.com:9092,ec2-52-89-43-209.us-west-2.compute.amazonaws.com:9092"
     brokers = "ec2-52-25-139-222.us-west-2.compute.amazonaws.com:9092"
     topic = 'Venmo-Transactions-Dev'
@@ -405,22 +387,6 @@ if __name__ == "__main__":
     transaction = kafka_stream.map(lambda kafka_response: json.loads(kafka_response[1]))\
         .map(lambda json_body: extract_data(json_body))\
         .foreachRDD(lambda rdd: rdd.foreachPartition(send_partition))
-
-
-    # def updateFunc(new_values, last_sum):
-    #     print("COUNT: " + sum(new_values) + (last_sum or 0))
-    #     return sum(new_values) + (last_sum or 0)
-
-    # running_counts = kafka_stream.map(lambda kafka_response: json.loads(kafka_response[1]))\
-    #     .map(lambda json_body: extract_data(json_body))\
-    #     .count()
-
-    # print("COUNT: " + running_counts)
-
-    # running_counts.pprint()
-
-    # .foreachRDD(lambda rdd: print("NEW RDD: " + str(rdd.collect())))
-    # transaction.pprint()
 
     ssc.start()
     ssc.awaitTermination()

@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block userinfo %}
+<div class="container">
+    <div class="starter-template">
+        <div class="row" style="height:50vh;">
+            <div class="col-md-10 col-md-offset-1">
+                <table class="table">
+                    <thead>
+                    <tr>
+                        <th>Red Transitivity</th>
+                        <th>Blue Transitivity</th>
+                        <th>Yellow Transitivity</th>
+                        <th>Green Transitivity</th>
+                        <th>Black Transitivity</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr>
+                        <td>{{output.red_transitivity}}</td>
+                        <td>{{output.blue_transitivity}}</td>
+                        <td>{{output.yellow_transitivity}}</td>
+                        <td>{{output.green_transitivity}}</td>
+                        <td>{{output.black_transitivity}}</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
