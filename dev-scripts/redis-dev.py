@@ -140,7 +140,7 @@ if __name__ == "__main__":
     # redis_db.delete('edge_res')
     # redis_db.delete('wedge_res')
     # redis_db.delete('is_closed')
-    streaming_triangles(redis_db, 20000, 20000)
+    # streaming_triangles(redis_db, 20000, 20000)
 
 # r.set('foo', 'bar')
 # print r.get('foo')

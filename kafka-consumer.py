@@ -21,7 +21,7 @@ class Consumer(threading.Thread):
     def run(self):
         consumer = KafkaConsumer(bootstrap_servers='52.25.139.222:9092',
                 auto_offset_reset='latest')
-        consumer.subscribe(['Venmo-Transactions-Test'])
+        consumer.subscribe(['Venmo-Transactions-Dev'])
 
         for message in consumer:
             msg = str(message.value)

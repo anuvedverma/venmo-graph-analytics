@@ -53,6 +53,7 @@ def username_post():
     blacks = response['Item']['black_neighbors']
 
     transitivity = redis_db.get('transitivity')
+    total_wedges = redis_db.get('total_wedges')
 
     user = response['Item']['id']
     red_neighbors = set([x for x in reds if x is not None])
@@ -89,6 +90,7 @@ def username_post():
                      "green_edges": green_edges,
                      "black_edges": black_edges,
                      "transitivity": transitivity,
+                     "total_wedges": total_wedges,
                      }
     return render_template("userinfo.html", output=response_dict)
 

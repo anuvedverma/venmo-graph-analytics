@@ -24,6 +24,9 @@ java -Djava.library.path=./DynamoDBLocal_lib -jar DynamoDBLocal.jar -sharedDb
 # To start Redis (can only do on cluster)
 redis-server --protected-mode no
 
+# To start Tornado webserver (on cluster, site is on url: http://172.31.0.135/usersearch)
+sudo -E python tornado.py
+
 ## ============================= ##
 
 ## ======= CLUSTER SETUP ======= ##
