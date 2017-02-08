@@ -7,17 +7,12 @@ from pyspark import SparkConf
 from pyspark.streaming import StreamingContext
 from pyspark.streaming.kafka import KafkaUtils
 from botocore.exceptions import ClientError
-import boto3
+# import boto3
 import redis
-import pickle
-import numpy as np
 import random
 import json
+import rethinkdb as r
 
-
-# EDGE_RES_SIZE = 100
-# WEDGE_RES_SIZE = 100
-# count_broadcast = 27
 
 # Extract relevant data from json body
 def extract_data(json_body):
@@ -106,58 +101,39 @@ def analyze_message(message, neighbor):
 
 # Create an item
 def create_item(table, data):
-    table.put_item(
-       Item={
-           'id': data['id'],
-           'username': data['username'],
-           'firstname': data['firstname'],
-           'lastname': data['lastname'],
-           'picture': data['picture'],
-           'red_neighbors': [data['red_neighbor']],
-           'blue_neighbors': [data['blue_neighbor']],
-           'yellow_neighbors': [data['yellow_neighbor']],
-           'green_neighbors': [data['green_neighbor']],
-           'black_neighbors': [data['black_neighbor']],
-           'num_transactions': 1
-       }
-    )
+    print("creating item")
+    item = {'id': data['id'],
+            'username': data['username'],
+            'firstname': data['firstname'],
+            'lastname': data['lastname'],
+            'picture': data['picture'],
+            'red_neighbors': [data['red_neighbor']],
+            'blue_neighbors': [data['blue_neighbor']],
+            'yellow_neighbors': [data['yellow_neighbor']],
+            'green_neighbors': [data['green_neighbor']],
+            'black_neighbors': [data['black_neighbor']],
+            'num_transactions': 1
+            }
+    table.insert(item).run()
 
 
 # Update an existing item
 def update_item(table, data):
-    table.update_item(
-        Key={
-            'id': data['id']
-        },
-        UpdateExpression='SET num_transactions = num_transactions + :inc,' +
-                            # data['color'] + ' = ' + data['color'] + ' + :inc,' +
-                         '''username = :username,
-                            firstname = :firstname,
-                            lastname = :lastname,
-                            picture = :picture,
-                            red_neighbors = list_append(red_neighbors, :red_neighbor),
-                            blue_neighbors = list_append(blue_neighbors, :blue_neighbor),
-                            yellow_neighbors = list_append(yellow_neighbors, :yellow_neighbor),
-                            green_neighbors = list_append(green_neighbors, :green_neighbor),
-                            black_neighbors = list_append(black_neighbors, :black_neighbor)''',
-
-        ExpressionAttributeValues={
-            ':username': data['username'],
-            ':firstname': data['firstname'],
-            ':lastname': data['lastname'],
-            ':picture': data['picture'],
-            ':red_neighbor': [data['red_neighbor']],
-            ':blue_neighbor': [data['blue_neighbor']],
-            ':yellow_neighbor': [data['yellow_neighbor']],
-            ':green_neighbor': [data['green_neighbor']],
-            ':black_neighbor': [data['black_neighbor']],
-            ':inc': 1
-        }
-    )
+    print("updating item")
+    table.get(data['id']).update({'username': data['username'],
+                                  'firstname': data['firstname'],
+                                  'lastname': data['lastname'],
+                                  'picture': data['picture']}).run()
+    table.get(data['id']).update({'num_transactions': r.row['num_transactions'].add(1)}).run()
+    table.get(data['id']).update({'red_neighbors': r.row['red_neighbors'].append(data['red_neighbor'])}).run()
+    table.get(data['id']).update({'blue_neighbors': r.row['blue_neighbors'].append(data['blue_neighbor'])}).run()
+    table.get(data['id']).update({'yellow_neighbors': r.row['yellow_neighbors'].append(data['yellow_neighbor'])}).run()
+    table.get(data['id']).update({'green_neighbors': r.row['green_neighbors'].append(data['green_neighbor'])}).run()
+    table.get(data['id']).update({'black_neighbors': r.row['black_neighbors'].append(data['black_neighbor'])}).run()
 
 
 # Update DynamoDB according to new transaction data
-def update_dynamodb(table, data_dict):
+def update_rethinkdb(table, data_dict):
     # Sender data
     message = data_dict['message']
     color_map = analyze_message(message, data_dict['to_id'])
@@ -171,12 +147,11 @@ def update_dynamodb(table, data_dict):
                    'yellow_neighbor': color_map['yellow'],
                    'green_neighbor': color_map['green'],
                    'black_neighbor': color_map['black']}
-    try:
-        update_item(table, sender_data)
-    except ClientError as e:
-        print(e.response['Error']['Message'])
-        # print(e.response)
+
+    if table.get(sender_data['id']).run() is None:
         create_item(table, sender_data)
+    else:
+        update_item(table, sender_data)
 
     # Receiver data
     message = data_dict['message']
@@ -191,177 +166,63 @@ def update_dynamodb(table, data_dict):
                      'yellow_neighbor': color_map['yellow'],
                      'green_neighbor': color_map['green'],
                      'black_neighbor': color_map['black']}
-    try:
-        update_item(table, receiver_data)
-    except ClientError as e:
-        print(e.response['Error']['Message'])
-        # print(e.response)
+
+    if table.get(receiver_data['id']).run() is None:
         create_item(table, receiver_data)
+    else:
+        update_item(table, receiver_data)
 
 
-# def get_wedge(edge1, edge2):
-#     if edge1[0] == edge2[0]:
-#         return tuple((edge2[1], edge1[0], edge1[1]))
-#     if edge1[0] == edge2[1]:
-#         return tuple((edge2[0], edge1[0], edge1[1]))
-#     if edge1[1] == edge2[0]:
-#         return tuple((edge2[1], edge1[1], edge1[0]))
-#     if edge1[1] == edge2[1]:
-#         return tuple((edge2[0], edge1[1], edge1[0]))
-#     return None
-#
-#
-# def is_closed_by(wedge, edge):
-#     if (wedge[0] == edge[0] and wedge[2] == edge[1]) or (wedge[0] == edge[1] and wedge[2] == edge[0]):
-#         return True
-#     return False
-#
-#
-# def creates_wedge(edge1, edge2):
-#     if edge1[0] == edge2[0] and edge1[1] != edge2[1]:
-#         return True
-#     if edge1[0] == edge2[1] and edge1[1] != edge2[0]:
-#         return True
-#     if edge1[1] == edge2[1] and edge1[0] != edge2[0]:
-#         return True
-#     if edge1[1] == edge2[0] and edge1[0] != edge2[1]:
-#         return True
-#     return False
-#
-#
-# def update(redis_db, new_edge):
-#
-#     edge_count = int(redis_db.get('edge_count'))
-#     total_wedges = int(redis_db.get('total_wedges'))
-#
-#     edge_count += 1
-#     print("EDGE COUNT: " + str(edge_count))
-#
-#     edge_res = pickle.loads(redis_db.get('edge_res'))
-#     wedge_res = pickle.loads(redis_db.get('wedge_res'))
-#     is_closed = pickle.loads(redis_db.get('is_closed'))
-#     updated_edge_res = False
-#
-#     print(edge_res)
-#     print(wedge_res)
-#     print(is_closed)
-#
-#     for i in range(len(wedge_res)):
-#         if is_closed_by(wedge_res[i], new_edge):
-#             is_closed[i] = True
-#     for i in range(len(edge_res)):
-#         x = random.uniform(0, 1)
-#         if x < (1 / float(edge_count)):
-#             edge_res[i] = new_edge
-#             updated_edge_res = True
-#     if updated_edge_res:
-#         new_wedges = []
-#         for i in range(len(edge_res)):
-#             if creates_wedge(edge_res[i], new_edge):
-#                 new_wedges.append(get_wedge(edge_res[i], new_edge))
-#         total_wedges += len(new_wedges)
-#         for i in range(len(wedge_res)):
-#             x = random.uniform(0, 1)
-#             if total_wedges > 0 and x < (len(new_wedges) / float(total_wedges)):
-#                 w = random.choice(new_wedges)
-#                 wedge_res[i] = w
-#                 is_closed[i] = False
-#
-#     print("TOTAL WEDGES COUNT: " + str(total_wedges))
-#     pickled_edge_res = pickle.dumps(edge_res)
-#     redis_db.set('edge_res', pickled_edge_res)
-#     pickled_wedge_res = pickle.dumps(wedge_res)
-#     redis_db.set('wedge_res', pickled_wedge_res)
-#     pickled_is_closed = pickle.dumps(is_closed)
-#     redis_db.set('is_closed', pickled_is_closed)
-#
-#     redis_db.incr('edge_count')
-#     redis_db.set('total_wedges', total_wedges)
-#
-#
-#     # print(edge_res)
-#     # print(wedge_res)
-#     # print(is_closed)
-#
-#     return np.sum(is_closed) / float(len(is_closed))
-#
-#
-# def streaming_triangles(redis_db, new_edge):
-#     k = update(redis_db, new_edge)
-#     # print(tot_wedges)
-#     transitivity = 3*k
-#     print("TOTAL WEDGES: " + str(redis_db.get('total_wedges')))
-#     redis_db.set('transitivity', transitivity)
-#     # redis_db.set('total_wedges', redis_db.get('tot_wedges'))
-
-
-# Send data to DynamoDB/Redis databases
+# Send data to RethinkDB/Redis databases
 def send_partition(rdd):
 
     # DynomoDB connection
-    dynamodb = boto3.resource('dynamodb',
-                            aws_access_key_id='dummy-access-id',
-                            aws_secret_access_key='dummy-secret-access-key',
-                            region_name='us-west-2',
-                            endpoint_url='http://localhost:8000')  # Set DynamoDB connection (local)
-    # dynamodb = boto3.resource('dynamodb') # Set DynamoDB connection (cluster)
-    dynamo_table = dynamodb.Table('venmo-graph-analytics-dev')  # Set DynamoDB table
+    # dynamodb = boto3.resource('dynamodb',
+    #                         aws_access_key_id='dummy-access-id',
+    #                         aws_secret_access_key='dummy-secret-access-key',
+    #                         region_name='us-west-2',
+    #                         endpoint_url='http://localhost:8000')  # Set DynamoDB connection (local)
+    # dynamodb = boto3.resource('dynamodb',
+    #                         aws_access_key_id='dummy-access-id',
+    #                         aws_secret_access_key='dummy-secret-access-key',
+    #                         region_name='us-west-2',
+    #                         endpoint_url='http://ec2-52-33-8-227.us-west-2.compute.amazonaws.com:8000') # Set DynamoDB connection (cluster)
+    # dynamo_table = dynamodb.Table('venmo-graph-analytics-dev')  # Set DynamoDB table
+
+    # RethinkDB connection
+    conn = r.connect('localhost', 28015, db='venmo_graph_analytics_dev').repl()
+    users_table = r.table('users')
 
     # Redis connection
     redis_server = 'ec2-52-33-8-227.us-west-2.compute.amazonaws.com' # Set Redis connection (local)
     # redis_server = 'localhost' # Set Redis connection (cluster)
     redis_db = redis.StrictRedis(host=redis_server, port=6379, db=0)
 
-    # Init edge/wedge reservoirs
-    # global EDGE_RES_SIZE
-    # global WEDGE_RES_SIZE
-    # edge_res = [list(tuple((0, 0))) for _ in xrange(EDGE_RES_SIZE)]
-    # pickled_edge_res = pickle.dumps(edge_res)
-    # redis_db.set('edge_res', pickled_edge_res)
-    #
-    # wedge_res = [list(tuple((0, 0, 0))) for _ in xrange(WEDGE_RES_SIZE)]
-    # pickled_wedge_res = pickle.dumps(wedge_res)
-    # redis_db.set('wedge_res', pickled_wedge_res)
-    #
-    # is_closed = [False for _ in xrange(WEDGE_RES_SIZE)]
-    # pickled_is_closed = pickle.dumps(is_closed)
-    # redis_db.set('is_closed', pickled_is_closed)
-    #
-    # redis_db.set('edge_count', 0)
-    # redis_db.set('total_wedges', 0)
-
-    # Route stream data to appropriate databases
-    # print(str(rdd))
     for record in rdd:
         print("Sending partition...")
 
         # Update DynamoDB with new record
-        update_dynamodb(dynamo_table, record)
+        # update_dynamodb(dynamo_table, record)
+        update_rethinkdb(users_table, record)
 
-        response = dynamo_table.get_item(Key={'id': record['from_id']}) # check to_user data
-        json_response = {"id": response['Item']['id'],
-                         "firstname": response['Item']['firstname'],
-                         "lastname": response['Item']['lastname'],
-                         "username": response['Item']['username'],
-                         "num_transactions": response['Item']['num_transactions']}
-        redis_db.set(response['Item']['username'], response['Item']['id'])
-        print("Successfully put " + str(json_response) + " into DynamoDB and Redis")
+        # response = dynamo_table.get_item(Key={'id': record['from_id']}) # check to_user data
+        response = users_table.get(record['from_id']).run() # check to_user data
+        json_response = {"id": response['id'],
+                         "firstname": response['firstname'],
+                         "lastname": response['lastname'],
+                         "username": response['username'],
+                         "num_transactions": response['num_transactions']}
+        redis_db.set(response['username'], response['id'])
+        print("Successfully put " + str(json_response) + " into RethinkDB and Redis")
 
-        response = dynamo_table.get_item(Key={'id': record['to_id']}) # check from_user data
-        json_response = {"id": response['Item']['id'],
-                         "firstname": response['Item']['firstname'],
-                         "lastname": response['Item']['lastname'],
-                         "username": response['Item']['username'],
-                         "num_transactions": response['Item']['num_transactions']}
-        redis_db.set(response['Item']['username'], response['Item']['id'])
-        print("Successfully put " + str(json_response) + " into DynamoDB and Redis")
-
-        # # Run approximate transitivity algorithm
-        # node1 = int(response['Item']['id'])
-        # node2 = int(response['Item']['id'])
-        # new_edge = tuple((node1, node2))
-        # streaming_triangles(redis_db, new_edge)
-        # print("Successfully processed edge (" + str(node1) + ", " + str(node2) + ") into Redis")
+        response = users_table.get(record['to_id']).run() # check from_user data
+        json_response = {"id": response['id'],
+                         "firstname": response['firstname'],
+                         "lastname": response['lastname'],
+                         "username": response['username'],
+                         "num_transactions": response['num_transactions']}
+        redis_db.set(response['username'], response['id'])
+        print("Successfully put " + str(json_response) + " into RethinkDB and Redis")
 
 
 # To Run:

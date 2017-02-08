@@ -7,15 +7,19 @@ from flask import request
 import sys
 import json
 import redis
-import boto3
+import rethinkdb as r
+# import boto3
 
-dynamodb = boto3.resource('dynamodb',
-                          aws_access_key_id='dummy-access-id',
-                          aws_secret_access_key='dummy-secret-access-key',
-                          region_name='us-west-2',
-                          endpoint_url='http://localhost:8000')  # Set DynamoDB connection (local)
+# dynamodb = boto3.resource('dynamodb',
+#                           aws_access_key_id='dummy-access-id',
+#                           aws_secret_access_key='dummy-secret-access-key',
+#                           region_name='us-west-2',
+#                           endpoint_url='http://localhost:8000')  # Set DynamoDB connection (local)
+#
+# dynamo_table = dynamodb.Table('venmo-graph-analytics-dev')  # Set DynamoDB table
 
-dynamo_table = dynamodb.Table('venmo-graph-analytics-dev')  # Set DynamoDB table
+conn = r.connect('localhost', 28015, db='venmo_graph_analytics_dev')
+users_table = r.table('users')
 
 redis_server = 'ec2-52-33-8-227.us-west-2.compute.amazonaws.com'
     # redis_server = 'localhost'
@@ -59,20 +63,22 @@ def username_post():
     id = redis_db.get(username)
     print("Received request: " + id)
 
-    response = dynamo_table.get_item(
-        Key={
-            'id': int(id),
-        }
-    )
+    response = users_table.get(int(id)).run(conn)
+    # response = dynamo_table.get_item(
+    #     Key={
+    #         'id': int(id),
+    #     }
+    # )
 
-    num_transactions = response['Item']['num_transactions']
-    reds = response['Item']['red_neighbors']
-    blues = response['Item']['blue_neighbors']
-    yellows = response['Item']['yellow_neighbors']
-    greens = response['Item']['green_neighbors']
-    blacks = response['Item']['black_neighbors']
+    print(response)
+    num_transactions = response['num_transactions']
+    reds = response['red_neighbors']
+    blues = response['blue_neighbors']
+    yellows = response['yellow_neighbors']
+    greens = response['green_neighbors']
+    blacks = response['black_neighbors']
 
-    user = response['Item']['id']
+    user = response['id']
     red_neighbors = set([x for x in reds if x is not None])
     blue_neighbors = set([x for x in blues if x is not None])
     yellow_neighbors = set([x for x in yellows if x is not None])
@@ -92,9 +98,9 @@ def username_post():
     num_blacks = len([x for x in blacks if x is not None])
 
     # print("Query result: " + response)
-    response_dict = {"firstname": response['Item']['firstname'],
-                     "lastname": response['Item']['lastname'],
-                     "username": response['Item']['username'],
+    response_dict = {"firstname": response['firstname'],
+                     "lastname": response['lastname'],
+                     "username": response['username'],
                      "num_transactions": num_transactions,
                      "ratio_reds": float(num_reds / num_transactions),
                      "ratio_blues": float(num_blues / num_transactions),
@@ -118,12 +124,13 @@ def realtime():
 def get_user(username):
 
     # Getting an item
-    response = dynamo_table.get_item(
-        Key={
-            'id': username,
-        }
-    )
-    item = jsonify(response['Item'])
+    response = users_table.get(id).run(conn)
+    # response = dynamo_table.get_item(
+    #     Key={
+    #         'id': username,
+    #     }
+    # )
+    item = jsonify(response)
     print(item)
     return item
 
@@ -134,8 +141,9 @@ def bfs(user, deg1_neighbors, color_neighbors):
         edge = sorted([int(user), int(deg1_neighbor)])
         edge_list.append(tuple(edge))
 
-        response = dynamo_table.get_item(Key={'id': int(deg1_neighbor)})
-        deg2_neighbors = response['Item'][color_neighbors]
+        # response = dynamo_table.get_item(Key={'id': int(deg1_neighbor)})
+        response = users_table.get(deg1_neighbor).run(conn)
+        deg2_neighbors = response[color_neighbors]
         deg2_neighbors = set([x for x in deg2_neighbors if x is not None])
         for deg2_neighbor in deg2_neighbors:
             edge = sorted([int(deg1_neighbor), int(deg2_neighbor)])
