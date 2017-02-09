@@ -1,8 +1,8 @@
 #! /usr/bin/env python
 
-from tornado.wsgi import WSGIContainer
-from tornado.ioloop import IOLoop
-from tornado.web import FallbackHandler, RequestHandler, Application
+from tornadoapp.wsgi import WSGIContainer
+from tornadoapp.ioloop import IOLoop
+from tornadoapp.web import FallbackHandler, RequestHandler, Application
 from app import app
 
 class MainHandler(RequestHandler):

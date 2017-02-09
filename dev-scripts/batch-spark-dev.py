@@ -105,6 +105,7 @@ def color_messages(transaction_data):
 
     return results
 
+
 def analyze_message(message):
     colors = Set([])
 
@@ -144,83 +145,68 @@ def filter_blacks(transaction_data):
     return True
 
 
-def group_by_color(color, user1, user2):
-    pass
-
-
-# Send data to RethinkDB/Redis databases
-def send_partition(rdd):
+def send_to_rethink(rdd):
 
     # RethinkDB connection
     # conn = r.connect('localhost', 28015, db='venmo_graph_analytics_dev').repl()
     # users_table = r.table('users')
 
+    # Update RethinkDB with new record
+    # update_rethinkdb(users_table, record)
+
+    pass
+
+
+# Send data to RethinkDB/Redis databases
+def send_to_redis(rdd):
+
     # Redis connection
-    redis_server = 'ec2-52-35-109-64.us-west-2.compute.amazonaws.com' # Set Redis connection (local)
+    redis_server = 'ec2-52-35-109-64.us-west-2.compute.amazonaws.com' # Set Redis connection
     # redis_server = 'localhost' # Set Redis connection (cluster)
     redis_db = redis.StrictRedis(host=redis_server, port=6379, db=0)
 
     for record in rdd:
+        color = record[0]
+        edge_list = record[1]
+
         print("Sending partition...")
-        print("Color: " + record[0])
-        print("Values: " + record[1])
+        redis_db.lpush(color, *edge_list)
 
-        # Update DynamoDB with new record
-        # update_dynamodb(dynamo_table, record)
-        # update_rethinkdb(users_table, record)
-
-        # response = dynamo_table.get_item(Key={'id': record['from_id']}) # check to_user data
-        # response = users_table.get(record['from_id']).run() # check to_user data
-        # json_response = {"id": response['id'],
-        #                  "firstname": response['firstname'],
-        #                  "lastname": response['lastname'],
-        #                  "username": response['username'],
-        #                  "num_transactions": response['num_transactions']}
-        # redis_db.set(response['username'], response['id'])
-        # print("Successfully put " + str(json_response) + " into RethinkDB and Redis")
-
-        # response = users_table.get(record['to_id']).run() # check from_user data
-        # json_response = {"id": response['id'],
-        #                  "firstname": response['firstname'],
-        #                  "lastname": response['lastname'],
-        #                  "username": response['username'],
-        #                  "num_transactions": response['num_transactions']}
-        # redis_db.set(response['username'], response['id'])
-        # print("Successfully put " + str(json_response) + " into RethinkDB and Redis")
+        print("Successfully put " + str(redis_db.lrange(color, 0, len(edge_list)-1)) + " into Redis")
 
 
 # To Run:
 # sudo $SPARK_HOME/bin/spark-submit --packages org.apache.spark:spark-streaming-kafka-0-8_2.11:2.1.0 kafka-spark-test.py
 if __name__ == "__main__":
 
-    # To run on cluster:
-    # conf = SparkConf().setAppName("Venmo-Graph-Analytics-Dev").setMaster("spark://ip-172-31-0-135:7077")
-    # sc = SparkContext(conf=conf)
-
-    # To run locally:
+    # Set Spark context
     sc = SparkContext(appName="Venmo-Graph-Analytics-Dev")
-    # sq = SparkSession.builder.getOrCreate()
 
     # Read data from S3
     # read_rdd = sc.textFile("s3n://venmo-json/2017_01/*")
     read_rdd = sc.textFile("s3n://venmo-json/2011_01/*")
     # read_rdd = sc.textFile("s3n://venmo-json/2013_01/*")
 
-    cleaned_rdd = read_rdd.map(lambda x: extract_data(x)).filter(lambda x: filter_nones(x))
-    colored_rdd = cleaned_rdd.flatMap(lambda x: color_messages(x))
-    filtered_rdd = colored_rdd.filter(lambda x: filter_blacks(x))
-    color_grouped_rdd = filtered_rdd.map(lambda x: (x[0], [tuple((x[1], x[2]))])).reduceByKey(lambda x, y: x + y)
-    color_grouped_rdd.foreachRDD(lambda rdd: rdd.foreachPartition(send_partition))
+    # Clean and filter data
+    cleaned_rdd = read_rdd.map(lambda x: extract_data(x)).filter(lambda x: filter_nones(x)) # clean json data
+    colored_rdd = cleaned_rdd.flatMap(lambda x: color_messages(x)) # classify messages with color
+    filtered_rdd = colored_rdd.filter(lambda x: filter_blacks(x)) # filter out black edges
+    color_grouped_rdd = filtered_rdd.map(lambda x: (x[0], [tuple((x[1], x[2]))]))\
+        .reduceByKey(lambda x, y: x + y) # group to (key: color, value: [edge-list])
+
+    # Send data to DBs
+    color_grouped_rdd.foreachPartition(lambda x: send_to_redis(x))
+    # color_grouped_rdd.foreachPartition(lambda x: send_to_rethink(x))
 
     # output = colored_rdd.take(500)
     colored_rdd_count = colored_rdd.count()
     filtered_rdd_count = filtered_rdd.count()
     color_grouped_rdd_count = color_grouped_rdd.count()
 
-    print("COLORED RDD: " + str(colored_rdd.take(10)))
-    print("FILTERED RDD: " + str(filtered_rdd.take(10)))
+    # print("COLORED RDD: " + str(colored_rdd.take(10)))
+    # print("FILTERED RDD: " + str(filtered_rdd.take(10)))
     # print("COLOR GROUPED RDD: " + str(color_grouped_rdd.take(10)))
 
-    print("COLORED RDD COUNT: " + str(colored_rdd_count))
-    print("FILTERED RDD COUNT: " + str(filtered_rdd_count))
-    print("COLOR GROUPED RDD COUNT: " + str(color_grouped_rdd_count))
+    # print("COLORED RDD COUNT: " + str(colored_rdd_count))
+    # print("FILTERED RDD COUNT: " + str(filtered_rdd_count))
+    # print("COLOR GROUPED RDD COUNT: " + str(color_grouped_rdd_count))
