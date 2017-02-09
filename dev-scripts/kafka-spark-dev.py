@@ -194,7 +194,7 @@ def send_partition(rdd):
     users_table = r.table('users')
 
     # Redis connection
-    redis_server = 'ec2-52-33-8-227.us-west-2.compute.amazonaws.com' # Set Redis connection (local)
+    redis_server = 'ec2-52-35-109-64.us-west-2.compute.amazonaws.com' # Set Redis connection (local)
     # redis_server = 'localhost' # Set Redis connection (cluster)
     redis_db = redis.StrictRedis(host=redis_server, port=6379, db=0)
 
@@ -240,7 +240,7 @@ if __name__ == "__main__":
     ssc = StreamingContext(sc, 1)   # Set Spark Streaming context
 
     # brokers = "ec2-50-112-19-115.us-west-2.compute.amazonaws.com:9092,ec2-52-33-162-7.us-west-2.compute.amazonaws.com:9092,ec2-52-89-43-209.us-west-2.compute.amazonaws.com:9092"
-    brokers = "ec2-52-25-139-222.us-west-2.compute.amazonaws.com:9092"
+    brokers = "ec2-52-35-109-64.us-west-2.compute.amazonaws.com:9092"
     topic = 'Venmo-Transactions-Dev'
 
     kafka_stream = KafkaUtils.createDirectStream(ssc, [topic], {"metadata.broker.list": brokers})

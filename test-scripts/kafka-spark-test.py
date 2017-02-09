@@ -31,7 +31,7 @@ def send_partition(iter):
     # dynamodb = boto3.resource('dynamodb') # Set DynamoDB connection (cluster)
     dynamo_table = dynamodb.Table('venmo-graph-analytics-test')  # Set DynamoDB table
 
-    redis_server = 'ec2-52-33-8-227.us-west-2.compute.amazonaws.com'
+    redis_server = 'ec2-52-35-109-64.us-west-2.compute.amazonaws.com'
     # redis_server = 'localhost'
     redis_db = redis.StrictRedis(host=redis_server, port=6379, db=0)
 

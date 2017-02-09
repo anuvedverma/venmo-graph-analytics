@@ -8,5 +8,5 @@ conn = r.connect('localhost', 28015, db='venmo_graph_analytics_dev').repl()
 # print r.db_list().run()
 #
 
-count = r.table('users').count()
+count = r.table('users').count().run(conn)
 print(count)

@@ -21,7 +21,7 @@ import rethinkdb as r
 conn = r.connect('localhost', 28015, db='venmo_graph_analytics_dev')
 users_table = r.table('users')
 
-redis_server = 'ec2-52-33-8-227.us-west-2.compute.amazonaws.com'
+redis_server = 'ec2-52-35-109-64.us-west-2.compute.amazonaws.com'
     # redis_server = 'localhost'
 redis_db = redis.StrictRedis(host=redis_server, port=6379, db=0)
 

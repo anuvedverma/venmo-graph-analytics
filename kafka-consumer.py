@@ -19,7 +19,7 @@ class Consumer(threading.Thread):
 
     # Thread sets up consumer and consumes kafka messages
     def run(self):
-        consumer = KafkaConsumer(bootstrap_servers='52.25.139.222:9092',
+        consumer = KafkaConsumer(bootstrap_servers='52.35.109.64:9092',
                 auto_offset_reset='latest')
         consumer.subscribe(['Venmo-Transactions-Dev'])
 

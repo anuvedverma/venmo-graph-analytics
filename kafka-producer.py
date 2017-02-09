@@ -17,7 +17,7 @@ class Producer(threading.Thread):
 
 
     def run(self):
-        producer = KafkaProducer(bootstrap_servers='52.25.139.222:9092')
+        producer = KafkaProducer(bootstrap_servers='52.35.109.64:9092')
         # producer = KafkaProducer(bootstrap_servers='localhost:9092')
 
         bucket_name = 'venmo-json'
@@ -56,7 +56,6 @@ class Producer(threading.Thread):
             return s3.Bucket(bucket_name)
 
 
-
 if __name__ == "__main__":
     print "Entered main"
     logging.basicConfig(
@@ -66,4 +65,5 @@ if __name__ == "__main__":
 
     producer = Producer()
     producer.start()
-    time.sleep(120)
+    while(True):
+        time.sleep(10)
