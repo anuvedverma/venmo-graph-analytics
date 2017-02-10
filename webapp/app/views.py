@@ -32,7 +32,6 @@ def index():
 @app.route('/communityinfo')
 def community_info():
 
-
     # red_transitivity = redis_db.get('red_transitivity')
     # blue_transitivity = redis_db.get('blue_transitivity')
     # yellow_transitivity = redis_db.get('yellow_transitivity')
@@ -48,43 +47,48 @@ def community_info():
     #                  "black_transitivity": black_transitivity,
     #                  "num_triangles": num_triangles}
 
-    red_graph = nx.Graph()
-    # blue_graph = nx.Graph()
-    # yellow_graph = nx.Graph()
-    # green_graph = nx.Graph()
-
     red_edges = redis_db.lrange('red', 0, -1)
     blue_edges = redis_db.lrange('blue', 0, -1)
     yellow_edges = redis_db.lrange('yellow', 0, -1)
     green_edges = redis_db.lrange('green', 0, -1)
 
-    for i in range(len(red_edges)):
-        red_edges[i] = make_tuple(red_edges[i])
-    for i in range(len(blue_edges)):
-        blue_edges[i] = make_tuple(blue_edges[i])
-    for i in range(len(yellow_edges)):
-        yellow_edges[i] = make_tuple(yellow_edges[i])
-    for i in range(len(green_edges)):
-        green_edges[i] = make_tuple(green_edges[i])
+    # process graphs
+    red_edges_response = process_graph(red_edges)
+    blue_edges_response = process_graph(blue_edges)
+    yellow_edges_response = process_graph(yellow_edges)
+    green_edges_response = process_graph(green_edges)
 
-    red_graph.add_edges_from(red_edges)
-    # red_graph.add_edges_from(red_edges)
-    # red_graph.add_edges_from(red_edges)
-    # red_graph.add_edges_from(red_edges)
-
-    # write json formatted data
-    d = json_graph.node_link_data(red_graph)  # node-link format to serialize
-    print(d)
     # write json
-    json.dump(d, open('/Users/anuvedverma/Projects/Insight/venmo-graph-analytics/webapp/app/static/graph.json', 'w+'))
+    json.dump(red_edges_response, open('/Users/anuvedverma/Projects/Insight/venmo-graph-analytics/webapp/app/static/red_graph.json', 'w+'))
+    json.dump(blue_edges_response, open('/Users/anuvedverma/Projects/Insight/venmo-graph-analytics/webapp/app/static/blue_graph.json', 'w+'))
+    json.dump(yellow_edges_response, open('/Users/anuvedverma/Projects/Insight/venmo-graph-analytics/webapp/app/static/yellow_graph.json', 'w+'))
+    json.dump(green_edges_response, open('/Users/anuvedverma/Projects/Insight/venmo-graph-analytics/webapp/app/static/green_graph.json', 'w+'))
 
-    response_dict = {"red_edges": red_edges,
-                     "blue_edges": blue_edges,
-                     "yellow_edges": yellow_edges,
-                     "green_edges": green_edges,
-                     "red_nodes": list(red_graph.nodes())}
+    # red_data = json_graph.node_link_data(red_graph)
+    response_dict = {"red_edges_response": json.dumps(red_edges_response),
+                     "blue_edges_response": json.dumps(blue_edges_response),
+                     "yellow_edges_response": json.dumps(yellow_edges_response),
+                     "green_edges_response": json.dumps(green_edges_response)}
 
     return render_template("communityinfo.html", output=response_dict)
+
+
+def process_graph(edges):
+    for i in range(len(edges)):
+        edges[i] = make_tuple(edges[i])
+
+    graph = nx.Graph()
+    graph.add_edges_from(edges)
+
+    remove = [edge for edge in edges if graph.degree(edge[0]) < 2 and graph.degree(edge[1]) < 2]
+    graph.remove_edges_from(remove)
+
+    response = []
+    for edge in graph.edges():
+        response.append({"source": edge[0], "target": edge[1]})
+
+    print(len(response))
+    return response
 
 
 @app.route('/usersearch')

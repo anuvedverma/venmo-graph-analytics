@@ -98,6 +98,8 @@ def color_messages(transaction_data):
     user2 = transaction_data['to_id']
     message = transaction_data['message']
     colors = analyze_message(message)
+    print("MESSAGE: " + message)
+    print("COLOR: " + str(colors))
 
     results = []
     for color in colors:
@@ -109,25 +111,40 @@ def color_messages(transaction_data):
 def analyze_message(message):
     colors = Set([])
 
-    # Insert real analysis here
-    # if random.uniform(0, 1) < 0.75:
-    if random.uniform(0, 1) < 1:
+    foods = [u"\U0001F355", u"\U0001F363",
+             u"\U0001F35C", u"\U0001F354",
+             u"\U0001F35F", u"\U0001F32E",
+             u"\U0001F32F", u"\U0001F35D"]
+    drinks = [u"\U0001F37E", u"\U0001F377",
+              u"\U0001F378", u"\U0001F379",
+              u"\U0001F37A", u"\U0001F37B",
+              u"\U0001F942", u"\U0001F943"]
+    transportation = [u"\U0001F695", u"\U0001F696",
+                      u"\U0001F697", u"\U0001F698",
+                      "taxi", "uber", "lyft"]
+    bills = [u"\U0001F3E0", u"\U0001F3E1",
+             u"\u26A1", u"\U0001F4B0",
+             u"\U0001F4A1", u"\U0001F6B0",
+             " bill", "rent", "internet"]
+
+    # Check for food-related content
+    if any(food in message.lower() for food in foods):
         colors.add(RED)
 
-    # if random.uniform(0, 1) < 0.25:
-    if random.uniform(0, 1) < 1:
+    # Check for drink-related content
+    if any(drink in message.lower() for drink in drinks):
         colors.add(BLUE)
 
-    # if random.uniform(0, 1) < 0.5:
-    if random.uniform(0, 1) < 1:
+    # Check for transportation-related content
+    if any(transport in message.lower() for transport in transportation):
         colors.add(YELLOW)
 
-    # if random.uniform(0, 1) < 0.1:
-    if random.uniform(0, 1) < 1:
+    # Check for transportation-related content
+    if any(bill in message.lower() for bill in bills):
         colors.add(GREEN)
 
-    # if random.uniform(0, 1) < 0.33:
-    if random.uniform(0, 1) < 1:
+    # Tag remaining items for removal
+    if len(colors) == 0:
         colors.add(BLACK)
 
     return colors
@@ -184,8 +201,8 @@ if __name__ == "__main__":
 
     # Read data from S3
     # read_rdd = sc.textFile("s3n://venmo-json/2017_01/*")
-    read_rdd = sc.textFile("s3n://venmo-json/2011_01/*")
-    # read_rdd = sc.textFile("s3n://venmo-json/2013_01/*")
+    # read_rdd = sc.textFile("s3n://venmo-json/2011_01/*")
+    read_rdd = sc.textFile("s3n://venmo-json/2013_01/*")
 
     # Clean and filter data
     cleaned_rdd = read_rdd.map(lambda x: extract_data(x)).filter(lambda x: filter_nones(x)) # clean json data
