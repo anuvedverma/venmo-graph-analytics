@@ -6,6 +6,7 @@ from flask import render_template
 from flask import request
 from ast import literal_eval as make_tuple
 import sys
+import os
 import json
 import redis
 import networkx as nx
@@ -14,11 +15,16 @@ import rethinkdb as r
 # import boto3
 
 
+RED = 'red'
+BLUE = 'blue'
+YELLOW = 'yellow'
+GREEN = 'green'
+BLACK = 'black'
+
 # conn = r.connect('localhost', 28015, db='venmo_graph_analytics_dev')
 # users_table = r.table('users')
 
 redis_server = 'ec2-52-35-109-64.us-west-2.compute.amazonaws.com'
-    # redis_server = 'localhost'
 redis_db = redis.StrictRedis(host=redis_server, port=6379, db=0)
 
 @app.route('/')
@@ -59,10 +65,11 @@ def community_info():
     green_edges_response = process_graph(green_edges)
 
     # write json
-    json.dump(red_edges_response, open('/Users/anuvedverma/Projects/Insight/venmo-graph-analytics/webapp/app/static/red_graph.json', 'w+'))
-    json.dump(blue_edges_response, open('/Users/anuvedverma/Projects/Insight/venmo-graph-analytics/webapp/app/static/blue_graph.json', 'w+'))
-    json.dump(yellow_edges_response, open('/Users/anuvedverma/Projects/Insight/venmo-graph-analytics/webapp/app/static/yellow_graph.json', 'w+'))
-    json.dump(green_edges_response, open('/Users/anuvedverma/Projects/Insight/venmo-graph-analytics/webapp/app/static/green_graph.json', 'w+'))
+    json_path = str(os.path.join(app.root_path, 'static'))
+    json.dump(red_edges_response, open(json_path + "/red_graph.json", 'w+'))
+    json.dump(blue_edges_response, open(json_path + "/blue_graph.json", 'w+'))
+    json.dump(yellow_edges_response, open(json_path + "/yellow_graph.json", 'w+'))
+    json.dump(green_edges_response, open(json_path + "/green_graph.json", 'w+'))
 
     # red_data = json_graph.node_link_data(red_graph)
     response_dict = {"red_edges_response": json.dumps(red_edges_response),
@@ -70,7 +77,49 @@ def community_info():
                      "yellow_edges_response": json.dumps(yellow_edges_response),
                      "green_edges_response": json.dumps(green_edges_response)}
 
-    return render_template("communityinfo.html", output=response_dict)
+    render_template("/redinfo.html", output=response_dict)
+    render_template("/blueinfo.html", output=response_dict)
+    render_template("/yellowinfo.html", output=response_dict)
+    render_template("/greeninfo.html", output=response_dict)
+    return render_template("/redinfo.html", output=response_dict)
+
+
+@app.route('/redinfo')
+def red_info():
+    return generate_response(RED)
+
+
+@app.route('/blueinfo')
+def blue_info():
+    return generate_response(BLUE)
+
+
+@app.route('/yellowinfo')
+def yellow_info():
+    return generate_response(YELLOW)
+
+
+@app.route('/greeninfo')
+def green_info():
+    return generate_response(GREEN)
+
+
+def generate_response(color):
+    edges = redis_db.lrange(color, 0, -1)
+    graph_eval = process_graph(edges)
+    edges_response = graph_eval[0]
+
+    approx_transitivity = redis_db.get(color + "_transitivity")
+    exact_transitivity = graph_eval[1]
+
+    json_path = str(os.path.join(app.root_path, 'static'))
+    json.dump(edges_response, open(json_path + "/" + color + "_graph.json", 'w+'))
+
+    response_dict = {"edges_response": json.dumps(edges_response),
+                     "approx_transitivity": float(approx_transitivity),
+                     "exact_transitivity": float(exact_transitivity)}
+
+    return render_template("/" + color + "info.html", output=response_dict)
 
 
 def process_graph(edges):
@@ -82,71 +131,20 @@ def process_graph(edges):
 
     remove = [edge for edge in edges if graph.degree(edge[0]) < 2 and graph.degree(edge[1]) < 2]
     graph.remove_edges_from(remove)
+    transitivity = nx.transitivity(graph)
 
     response = []
     for edge in graph.edges():
         response.append({"source": edge[0], "target": edge[1]})
 
     print(len(response))
-    return response
+    return response, transitivity
 
 
 @app.route('/usersearch')
 def user_search():
     return render_template("usersearch.html")
 
-# @app.route("/usersearch", methods=['POST'])
-# def username_post():
-#     username = request.form["username"]
-#     id = redis_db.get(username)
-#     print("Received request: " + id)
-#
-#     response = users_table.get(int(id)).run(conn)
-#
-#     print(response)
-#     num_transactions = response['num_transactions']
-#     reds = response['red_neighbors']
-#     blues = response['blue_neighbors']
-#     yellows = response['yellow_neighbors']
-#     greens = response['green_neighbors']
-#     blacks = response['black_neighbors']
-#
-#     user = response['id']
-#     red_neighbors = set([x for x in reds if x is not None])
-#     blue_neighbors = set([x for x in blues if x is not None])
-#     yellow_neighbors = set([x for x in yellows if x is not None])
-#     green_neighbors = set([x for x in greens if x is not None])
-#     black_neighbors = set([x for x in blacks if x is not None])
-#
-#     red_edges = bfs(user, red_neighbors, 'red_neighbors')
-#     blue_edges = bfs(user, blue_neighbors, 'blue_neighbors')
-#     yellow_edges = bfs(user, yellow_neighbors, 'yellow_neighbors')
-#     green_edges = bfs(user, green_neighbors, 'green_neighbors')
-#     black_edges = bfs(user, black_neighbors, 'black_neighbors')
-#
-#     num_reds = len([x for x in reds if x is not None])
-#     num_blues = len([x for x in blues if x is not None])
-#     num_yellows = len([x for x in yellows if x is not None])
-#     num_greens = len([x for x in greens if x is not None])
-#     num_blacks = len([x for x in blacks if x is not None])
-#
-#     # print("Query result: " + response)
-#     response_dict = {"firstname": response['firstname'],
-#                      "lastname": response['lastname'],
-#                      "username": response['username'],
-#                      "num_transactions": num_transactions,
-#                      "ratio_reds": float(num_reds / num_transactions),
-#                      "ratio_blues": float(num_blues / num_transactions),
-#                      "ratio_yellows": float(num_yellows / num_transactions),
-#                      "ratio_greens": float(num_greens / num_transactions),
-#                      "ratio_blacks": float(num_blacks / num_transactions),
-#                      "red_edges": red_edges,
-#                      "blue_edges": blue_edges,
-#                      "yellow_edges": yellow_edges,
-#                      "green_edges": green_edges,
-#                      "black_edges": black_edges,
-#                      }
-#     return render_template("userinfo.html", output=response_dict)
 
 @app.route('/realtime')
 def realtime():

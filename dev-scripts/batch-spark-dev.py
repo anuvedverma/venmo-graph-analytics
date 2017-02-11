@@ -13,15 +13,14 @@ from sets import Set
 import redis
 import random
 import json
+from pymoji import PyMoji
 import rethinkdb as r
-
 
 RED = 'red'
 BLUE = 'blue'
 YELLOW = 'yellow'
 GREEN = 'green'
 BLACK = 'black'
-
 
 # Extract relevant data from json body
 def extract_data(json_body):
@@ -98,8 +97,8 @@ def color_messages(transaction_data):
     user2 = transaction_data['to_id']
     message = transaction_data['message']
     colors = analyze_message(message)
-    print("MESSAGE: " + message)
-    print("COLOR: " + str(colors))
+    # print("MESSAGE: " + message)
+    # print("COLOR: " + str(colors))
 
     results = []
     for color in colors:
@@ -109,38 +108,42 @@ def color_messages(transaction_data):
 
 
 def analyze_message(message):
+    moji = PyMoji()
+    message = moji.encode(message)
+    if isinstance(message, str):
+        message = unicode(message, "utf-8")
+    message = message.encode('utf-8').lower()
+    # print(message)
+
+    # Define categorization rules
+    foods = ["[:pizza]", "[:hamburger]", "pizza", "food", "burrito"
+             "[:fries]", "[:ramen]", "tacos", "dinner", "lunch",
+             "[:spaghetti]", "[:poultry_leg]", "breakfast",
+             "[:sushi]"]
+    drinks = ["[:wine_glass]", "[:cocktail]", "[:tropical_drink]",
+              "[:beer]", "[:beers]", "[:tada]", "drinks"]
+    transportation = ["[:taxi]", "[:oncoming_taxi]", "[:car]",
+                      "[:oncoming_automobile]", "taxi", "uber", "lyft"]
+    bills = ["[:bulb]", "[:moneybag]", "[:potable_water]",
+             "[:house_with_garden]", "[:house]", " bill",
+             "rent", "internet", "utilities", "pg&e", "dues", "cable"]
+
     colors = Set([])
 
-    foods = [u"\U0001F355", u"\U0001F363",
-             u"\U0001F35C", u"\U0001F354",
-             u"\U0001F35F", u"\U0001F32E",
-             u"\U0001F32F", u"\U0001F35D"]
-    drinks = [u"\U0001F37E", u"\U0001F377",
-              u"\U0001F378", u"\U0001F379",
-              u"\U0001F37A", u"\U0001F37B",
-              u"\U0001F942", u"\U0001F943"]
-    transportation = [u"\U0001F695", u"\U0001F696",
-                      u"\U0001F697", u"\U0001F698",
-                      "taxi", "uber", "lyft"]
-    bills = [u"\U0001F3E0", u"\U0001F3E1",
-             u"\u26A1", u"\U0001F4B0",
-             u"\U0001F4A1", u"\U0001F6B0",
-             " bill", "rent", "internet"]
-
     # Check for food-related content
-    if any(food in message.lower() for food in foods):
+    if any(food in message for food in foods):
         colors.add(RED)
 
     # Check for drink-related content
-    if any(drink in message.lower() for drink in drinks):
+    if any(drink in message for drink in drinks):
         colors.add(BLUE)
 
     # Check for transportation-related content
-    if any(transport in message.lower() for transport in transportation):
+    if any(transport in message for transport in transportation):
         colors.add(YELLOW)
 
     # Check for transportation-related content
-    if any(bill in message.lower() for bill in bills):
+    if any(bill in message for bill in bills):
         colors.add(GREEN)
 
     # Tag remaining items for removal
@@ -219,11 +222,3 @@ if __name__ == "__main__":
     colored_rdd_count = colored_rdd.count()
     filtered_rdd_count = filtered_rdd.count()
     color_grouped_rdd_count = color_grouped_rdd.count()
-
-    # print("COLORED RDD: " + str(colored_rdd.take(10)))
-    # print("FILTERED RDD: " + str(filtered_rdd.take(10)))
-    # print("COLOR GROUPED RDD: " + str(color_grouped_rdd.take(10)))
-
-    # print("COLORED RDD COUNT: " + str(colored_rdd_count))
-    # print("FILTERED RDD COUNT: " + str(filtered_rdd_count))
-    # print("COLOR GROUPED RDD COUNT: " + str(color_grouped_rdd_count))

@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block communityinfo %}
+
+<script src="//d3js.org/d3.v3.min.js"></script>
+<script>
+
+//var width = screen.width,
+//    height = screen.height/2;
+
+var radius = 0.003;
+
+d3.json("/static/green_graph.json", function (data) {
+
+    var links = data;
+    var nodes = {};
+
+    // parse links to nodes
+    links.forEach(function (link) {
+        link.source = nodes[link.source] ||
+            (nodes[link.source] = {name: link.source});
+
+        link.target = nodes[link.target] ||
+            (nodes[link.target] = {name: link.target});
+    });
+
+    var width = screen.width,
+        height = Math.min(1000 * (links.length * 0.02), screen.height);
+
+    console.log(links);
+
+    // add svg to body
+    var svg = d3.select('body').append('svg')
+        .attr('width', width)
+        .attr('height', height);
+
+    var force = d3.layout.force()
+        .size([width, height])
+        .nodes(d3.values(nodes))
+        .links(links)
+        .on("tick", tick)
+        .linkDistance(150)
+        .start();
+
+    var link = svg.selectAll('.link')
+        .data(links)
+        .enter().append('line')
+        .attr('class', 'link');
+
+    var node = svg.selectAll('.green_node')
+        .data(force.nodes())
+        .enter().append('circle')
+        .attr('class', 'green_node')
+        .attr('r', width * radius);
+
+    function tick(e) {
+        node.attr('cx', function (d) {return d.x;})
+            .attr('cy', function (d) {return d.y;})
+            .call(force.drag);
+
+        link.attr('x1', function (d) {return d.source.x;})
+            .attr('y1', function (d) {return d.source.y;})
+            .attr('x2', function (d) {return d.target.x;})
+            .attr('y2', function (d) {return d.target.y;})
+    }
+});
+
+</script>
+
+
+<div class="transitivity-container">
+    <h4><b>Transitivity</b></h4>
+    <h5>Exact: {{output.exact_transitivity}}</h5>
+    <h5>Approximate: {{output.approx_transitivity}}</h5>
+</div>
+
+{% endblock %}

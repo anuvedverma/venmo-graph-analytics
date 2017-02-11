@@ -44,27 +44,63 @@
                 <span class="icon-bar"></span>
                 <span class="icon-bar"></span>
             </button>
-            <a class="navbar-brand" href="#">Venmo Analytics</a>
+            <a class="navbar-brand" href="#">Triangles</a>
         </div>
         <div id="navbar" class="collapse navbar-collapse">
             <ul class="nav navbar-nav">
-                <li><a href="/usersearch">User Search</a></li>
-                <li><a href="/communityinfo">Community Data</a></li>
+                <li><a href="/redinfo">Food</a></li>
+                <li><a href="/blueinfo">Drinks</a></li>
+                <li><a href="/yellowinfo">Transportation</a></li>
+                <li><a href="/greeninfo">Bills</a></li>
             </ul>
         </div><!--/.nav-collapse -->
     </div>
 </nav>
 
-<div class="container">
+<style>
+    .red_node {
+        fill: #cc2d2d;
+        stroke: #fff;
+        stroke-width: 2px;
+    }
 
-    <div class="starter-template">
-        <h1>Venmo Graph Analytics</h1>
-        {% block usersearch %}{% endblock %}
-        {% block userinfo %}{% endblock %}
+    .blue_node {
+        fill: #29b8cc;
+        stroke: #fff;
+        stroke-width: 2px;
+    }
+
+    .yellow_node {
+        fill: #f6e632;
+        stroke: #fff;
+        stroke-width: 2px;
+    }
+
+    .green_node {
+        fill: #20ee36;
+        stroke: #fff;
+        stroke-width: 2px;
+    }
+
+    .link {
+        stroke: #777;
+        stroke-width: 1px;
+    }
+
+    .transitivity-container {
+        /*width: 10%;*/
+        position: absolute;
+        float: left;
+        background-color: transparent;
+        padding: 15px;
+    }
+</style>
+
+<!--<div class="container">-->
+    <!--<div class="starter-template">-->
         {% block communityinfo %}{% endblock %}
-    </div>
-
-</div><!-- /.container -->
+    <!--</div>-->
+<!--</div>&lt;!&ndash; /.container &ndash;&gt;-->
 
 
 <!-- Bootstrap core JavaScript
