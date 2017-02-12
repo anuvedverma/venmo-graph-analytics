@@ -10,9 +10,9 @@ import os
 import json
 import redis
 import networkx as nx
+import csv
 from networkx.readwrite import json_graph
 import rethinkdb as r
-# import boto3
 
 
 RED = 'red'
@@ -21,67 +21,50 @@ YELLOW = 'yellow'
 GREEN = 'green'
 BLACK = 'black'
 
-# conn = r.connect('localhost', 28015, db='venmo_graph_analytics_dev')
-# users_table = r.table('users')
-
 redis_server = 'ec2-52-35-109-64.us-west-2.compute.amazonaws.com'
 redis_db = redis.StrictRedis(host=redis_server, port=6379, db=0)
+
 
 @app.route('/')
 @app.route('/index')
 def index():
-    user = {'nickname': 'Miguel'}  # fake user
-    mylist = [1, 2, 3, 4]
-    # return render_template("index.html", title='Home', list=mylist, )
-    return render_template("index.html", title='Home', user=user)
+    red_transitivity = float(redis_db.get(RED + '_transitivity_large'))
+    blue_transitivity = float(redis_db.get(BLUE + '_transitivity_large'))
+    yellow_transitivity = float(redis_db.get(YELLOW + '_transitivity_large'))
+    green_transitivity = float(redis_db.get(GREEN + '_transitivity_large'))
 
-@app.route('/communityinfo')
-def community_info():
+    csv_path = str(os.path.join(app.root_path, 'static'))
+    f = open(csv_path + "/transitivity.csv", 'w+')
+    try:
+        writer = csv.writer(f)
+        writer.writerow(['transaction_type', 'transitivity'])
+        writer.writerow(['Food', red_transitivity/10])
+        writer.writerow(['Drinks', (blue_transitivity/10)])
+        writer.writerow(['Transportation', (yellow_transitivity/10)])
+        writer.writerow(['Bills', (green_transitivity/10)])
+        f.flush()
+    finally:
+        f.close()
 
-    # red_transitivity = redis_db.get('red_transitivity')
-    # blue_transitivity = redis_db.get('blue_transitivity')
-    # yellow_transitivity = redis_db.get('yellow_transitivity')
-    # green_transitivity = redis_db.get('green_transitivity')
-    # black_transitivity = redis_db.get('black_transitivity')
-    # num_triangles = redis_db.get('num_triangles')
-    #
-    # # print("Query result: " + response)
-    # response_dict = {"red_transitivity": red_transitivity,
-    #                  "blue_transitivity": blue_transitivity,
-    #                  "yellow_transitivity": yellow_transitivity,
-    #                  "green_transitivity": green_transitivity,
-    #                  "black_transitivity": black_transitivity,
-    #                  "num_triangles": num_triangles}
+    num_red_transactions = redis_db.llen(RED)
+    num_blue_transactions = redis_db.llen(BLUE)
+    num_yellow_transactions = redis_db.llen(YELLOW)
+    num_green_transactions = redis_db.llen(GREEN)
 
-    red_edges = redis_db.lrange('red', 0, -1)
-    blue_edges = redis_db.lrange('blue', 0, -1)
-    yellow_edges = redis_db.lrange('yellow', 0, -1)
-    green_edges = redis_db.lrange('green', 0, -1)
+    csv_path = str(os.path.join(app.root_path, 'static'))
+    f = open(csv_path + "/transaction_counts.csv", 'w+')
+    try:
+        writer = csv.writer(f)
+        writer.writerow(['transaction_type', 'count'])
+        writer.writerow(['Food', num_red_transactions])
+        writer.writerow(['Drinks', num_blue_transactions])
+        writer.writerow(['Transportation', num_yellow_transactions])
+        writer.writerow(['Bills', num_green_transactions])
+        f.flush()
+    finally:
+        f.close()
 
-    # process graphs
-    red_edges_response = process_graph(red_edges)
-    blue_edges_response = process_graph(blue_edges)
-    yellow_edges_response = process_graph(yellow_edges)
-    green_edges_response = process_graph(green_edges)
-
-    # write json
-    json_path = str(os.path.join(app.root_path, 'static'))
-    json.dump(red_edges_response, open(json_path + "/red_graph.json", 'w+'))
-    json.dump(blue_edges_response, open(json_path + "/blue_graph.json", 'w+'))
-    json.dump(yellow_edges_response, open(json_path + "/yellow_graph.json", 'w+'))
-    json.dump(green_edges_response, open(json_path + "/green_graph.json", 'w+'))
-
-    # red_data = json_graph.node_link_data(red_graph)
-    response_dict = {"red_edges_response": json.dumps(red_edges_response),
-                     "blue_edges_response": json.dumps(blue_edges_response),
-                     "yellow_edges_response": json.dumps(yellow_edges_response),
-                     "green_edges_response": json.dumps(green_edges_response)}
-
-    render_template("/redinfo.html", output=response_dict)
-    render_template("/blueinfo.html", output=response_dict)
-    render_template("/yellowinfo.html", output=response_dict)
-    render_template("/greeninfo.html", output=response_dict)
-    return render_template("/redinfo.html", output=response_dict)
+    return render_template("index.html")
 
 
 @app.route('/redinfo')
@@ -113,7 +96,7 @@ def generate_response(color):
     graph_eval = process_graph(edges)
     edges_response = graph_eval[0]
 
-    approx_transitivity = redis_db.get(color + "_transitivity")
+    approx_transitivity = round(float(redis_db.get(color + "_transitivity")), 3)
     exact_transitivity = graph_eval[1]
 
     json_path = str(os.path.join(app.root_path, 'static'))
@@ -132,14 +115,10 @@ def process_graph(edges):
 
     graph = nx.Graph()
     graph.add_edges_from(edges)
-    transitivity = nx.transitivity(graph)
-    # transitivity = nx.average_clustering(graph)
+    transitivity = round(nx.transitivity(graph), 3)
 
     remove = [edge for edge in edges if graph.degree(edge[0]) < 2 and graph.degree(edge[1]) < 2]
     graph.remove_edges_from(remove)
-
-    # cycle_edges = list(nx.find_cycle(graph, orientation='ignore'))
-    # print(cycle_edges)
 
     response = []
     for edge in graph.edges():
@@ -149,6 +128,7 @@ def process_graph(edges):
     return response, transitivity
 
 
+# DELETE BELOW
 @app.route('/usersearch')
 def user_search():
     return render_template("usersearch.html")
@@ -160,38 +140,6 @@ def cluster_test():
     return render_template("/clustertest.html", output=response)
 
 
-
 @app.route('/realtime')
 def realtime():
     return render_template("realtime.html")
-
-
-# @app.route('/api/<username>')
-# def get_user(username):
-#
-#     # Getting an item
-#     response = users_table.get(id).run(conn)
-#     # response = dynamo_table.get_item(
-#     #     Key={
-#     #         'id': username,
-#     #     }
-#     # )
-#     item = jsonify(response)
-#     print(item)
-#     return item
-
-
-# def bfs(user, deg1_neighbors, color_neighbors):
-#     edge_list = []
-#     for deg1_neighbor in deg1_neighbors:
-#         edge = sorted([int(user), int(deg1_neighbor)])
-#         edge_list.append(tuple(edge))
-#
-#         # response = dynamo_table.get_item(Key={'id': int(deg1_neighbor)})
-#         response = users_table.get(deg1_neighbor).run(conn)
-#         deg2_neighbors = response[color_neighbors]
-#         deg2_neighbors = set([x for x in deg2_neighbors if x is not None])
-#         for deg2_neighbor in deg2_neighbors:
-#             edge = sorted([int(deg1_neighbor), int(deg2_neighbor)])
-#             edge_list.append(tuple(edge))
-#     return set(edge_list)

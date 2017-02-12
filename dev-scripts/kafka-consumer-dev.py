@@ -71,7 +71,7 @@ class StreamingTriangles(threading.Thread):
             colors = self.__analyze_message__(msg)
             for color in colors:
                 colored_edge = tuple((color, new_edge))
-                if colored_edge not in self.bloom_filter:
+                if colored_edge not in self.bloom_filter and -1 not in new_edge:
                     self.__streaming_triangles__(self.redis_db, new_edge, color)
                     self.bloom_filter.add(colored_edge)
 
@@ -158,8 +158,12 @@ class StreamingTriangles(threading.Thread):
     # Extract relevant data from json body
     def __extract_edge__(self, json_obj):
         json_data = json.loads(json_obj)
-        from_id = int(json_data['actor']['id']) # Sender data
-        to_id = int(json_data['transactions'][0]['target']['id']) # Receiver data
+        try:
+            from_id = int(json_data['actor']['id']) # Sender data
+            to_id = int(json_data['transactions'][0]['target']['id']) # Receiver data
+        except:
+            from_id = -1
+            to_id = -1
         edge = sorted(tuple((from_id, to_id)))
         return edge
 
