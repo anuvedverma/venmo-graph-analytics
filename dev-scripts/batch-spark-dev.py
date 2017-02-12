@@ -114,20 +114,18 @@ def analyze_message(message):
     if isinstance(message, str):
         message = unicode(message, "utf-8")
     message = message.encode('utf-8').lower()
-    # print(message)
 
     # Define categorization rules
-    foods = ["[:pizza]", "[:hamburger]", "pizza", "food", "burrito",
-             "[:fries]", "[:ramen]", "tacos", "dinner", "lunch",
-             "[:spaghetti]", "[:poultry_leg]", "breakfast",
-             "[:sushi]"]
-    drinks = ["[:wine_glass]", "[:cocktail]", "[:tropical_drink]",
-              "[:beer]", "[:beers]", "[:tada]", "drinks"]
-    transportation = ["[:taxi]", "[:oncoming_taxi]", "[:car]",
-                      "[:oncoming_automobile]", "taxi", "uber", "lyft"]
-    bills = ["[:bulb]", "[:moneybag]", "[:potable_water]",
-             "[:house_with_garden]", "[:house]", " bill",
-             "rent", "internet", "utilities", "pg&e", "dues", "cable"]
+    foods = ["pizza", "hamburger", "food", "burrito", "chinese", "indian",
+             "fries", "ramen", "taco", "dinner", "lunch",
+             "spaghetti", "poultry_leg", "breakfast", "sushi"]
+    drinks = ["wine", "cocktail", "drink", " bar"
+              "beer", "[:tada]", "club", "vegas"]
+    transportation = ["taxi", "[:car]", "[:oncoming_automobile]",
+                      "uber", "lyft", "ride", "drive", "driving"]
+    bills = ["bulb", "[:moneybag]", "water", "[:house_with_garden]",
+             "[:house]", " bill", "rent", "internet", "utilities",
+             "pg&e", "dues", "cable"]
 
     colors = Set([])
 
@@ -166,18 +164,6 @@ def filter_blacks(transaction_data):
     return True
 
 
-def send_to_rethink(rdd):
-
-    # RethinkDB connection
-    # conn = r.connect('localhost', 28015, db='venmo_graph_analytics_dev').repl()
-    # users_table = r.table('users')
-
-    # Update RethinkDB with new record
-    # update_rethinkdb(users_table, record)
-
-    pass
-
-
 # Send data to RethinkDB/Redis databases
 def send_to_redis(rdd):
 
@@ -206,7 +192,7 @@ if __name__ == "__main__":
     sc = SparkContext(appName="Venmo-Graph-Analytics-Dev")
 
     # Read data from S3
-    read_rdd = sc.textFile("s3n://venmo-json/2017_01/venmo_2017_01_30.json")
+    read_rdd = sc.textFile("s3n://venmo-json/2017_01/venmo_2013_02.json")
     # read_rdd = sc.textFile("s3n://venmo-json/2017_01/*")
     # read_rdd = sc.textFile("s3n://venmo-json/2011_01/*")
     # read_rdd = sc.textFile("s3n://venmo-json/2013_01/*")

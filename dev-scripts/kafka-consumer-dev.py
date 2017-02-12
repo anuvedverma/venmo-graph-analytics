@@ -25,8 +25,8 @@ class StreamingTriangles(threading.Thread):
     # Constructor sets up Redis connection and algorithm vars
     def __init__(self):
         super(StreamingTriangles, self).__init__()
-        self.redis_server = 'ec2-52-35-109-64.us-west-2.compute.amazonaws.com'
-        # redis_server = 'localhost'
+        # self.redis_server = 'ec2-52-35-109-64.us-west-2.compute.amazonaws.com'
+        self.redis_server = 'localhost'
         self.redis_db = redis.StrictRedis(host=self.redis_server, port=6379, db=0)
 
         self.edge_res_size = 20000
@@ -58,10 +58,11 @@ class StreamingTriangles(threading.Thread):
                           YELLOW: [False for _ in xrange(self.wedge_res_size)],
                           GREEN: [False for _ in xrange(self.wedge_res_size)]}
 
+        self.num_missed = 0
+        self.num_colored = 0
+
     # Thread sets up consumer and consumes kafka messages
     def run(self):
-        # consumer = KafkaConsumer(bootstrap_servers='52.25.139.222:9092',
-        #         auto_offset_reset='largest')
         consumer = KafkaConsumer(bootstrap_servers='52.35.109.64:9092')
         consumer.subscribe(['venmo-transactions'])
 
@@ -69,6 +70,7 @@ class StreamingTriangles(threading.Thread):
             msg = str(message.value)
             new_edge = self.__extract_edge__(msg)
             colors = self.__analyze_message__(msg)
+            self.redis_db.set('percent_caught', self.num_colored / float(self.num_colored + self.num_missed))
             for color in colors:
                 colored_edge = tuple((color, new_edge))
                 if colored_edge not in self.bloom_filter and -1 not in new_edge:
@@ -87,17 +89,16 @@ class StreamingTriangles(threading.Thread):
         print(message)
 
         # Define categorization rules
-        foods = ["[:pizza]", "[:hamburger]", "pizza", "food", "burrito",
-                 "[:fries]", "[:ramen]", "tacos", "dinner", "lunch",
-                 "[:spaghetti]", "[:poultry_leg]", "breakfast",
-                 "[:sushi]"]
-        drinks = ["[:wine_glass]", "[:cocktail]", "[:tropical_drink]",
-                  "[:beer]", "[:beers]", "[:tada]", "drinks"]
-        transportation = ["[:taxi]", "[:oncoming_taxi]", "[:car]",
-                          "[:oncoming_automobile]", "taxi", "uber", "lyft"]
-        bills = ["[:bulb]", "[:moneybag]", "[:potable_water]",
-                 "[:house_with_garden]", "[:house]", " bill",
-                 "rent", "internet", "utilities", "pg&e", "dues", "cable"]
+        foods = ["pizza", "hamburger", "food", "burrito", "chinese", "indian",
+                 "fries", "ramen", "taco", "dinner", "lunch",
+                 "spaghetti", "poultry_leg", "breakfast", "sushi"]
+        drinks = ["wine", "cocktail", "drink", " bar"
+                  "beer", "[:tada]", "club", "vegas"]
+        transportation = ["taxi", "[:car]", "[:oncoming_automobile]",
+                          "uber", "lyft", "ride", "drive", "driving"]
+        bills = ["bulb", "[:moneybag]", "water", "[:house_with_garden]",
+                 "[:house]", " bill", "rent", "internet", "utilities",
+                 "pg&e", "dues", "cable"]
 
         colors = Set([])
 
@@ -116,6 +117,11 @@ class StreamingTriangles(threading.Thread):
         # Check for transportation-related content
         if any(bill in message for bill in bills):
             colors.add(GREEN)
+
+        if(len(colors) == 0):
+            self.num_missed += 1
+        else:
+            self.num_colored += 1
 
         return colors
 
