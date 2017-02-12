@@ -15,7 +15,6 @@ class Producer(threading.Thread):
     #   super(Producer, self).__init__()
     #   self.producer = KafkaProducer(bootstrap_servers='52.25.139.222:9092')
 
-
     def run(self):
         producer = KafkaProducer(bootstrap_servers='52.35.109.64:9092')
         # producer = KafkaProducer(bootstrap_servers='localhost:9092')
@@ -27,8 +26,8 @@ class Producer(threading.Thread):
             data = obj.get()['Body']
             json_body = data.read().splitlines()
             for json_obj in json_body:
-                producer.send('Venmo-Transactions-Dev', json_obj)
-                time.sleep(0.01)
+                producer.send('venmo-transactions', json_obj)
+                time.sleep(0.001)
                 print json_obj + '\n' + '==============================================================================' + '\n'
 
         # for obj in bucket.objects.limit(100):

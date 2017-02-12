@@ -131,11 +131,6 @@ def analyze_message(message):
 
     colors = Set([])
 
-    # Testing Kafka producer
-    if True:
-        colors.add(RED)
-        colors.add(BLUE)
-
     # Check for food-related content
     if any(food in message for food in foods):
         colors.add(RED)

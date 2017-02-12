@@ -60,7 +60,7 @@ class StreamingTriangles(threading.Thread):
         # consumer = KafkaConsumer(bootstrap_servers='52.25.139.222:9092',
         #         auto_offset_reset='largest')
         consumer = KafkaConsumer(bootstrap_servers='52.35.109.64:9092')
-        consumer.subscribe(['Venmo-Transactions-Dev'])
+        consumer.subscribe(['venmo-transactions'])
 
         for message in consumer:
             msg = str(message.value)
@@ -130,11 +130,7 @@ class StreamingTriangles(threading.Thread):
     def __streaming_triangles__(self, redis_db, new_edge, color):
         k = self.__update__(new_edge, color)
         transitivity = 3 * k
-        print("Transitivity @ " + color + " edge #" + str(self.edge_count[color]) + ": " + str(transitivity))
-        print("Total "  + color + " wedges: " + str(self.total_wedges[color]))
-        # if self.edge_count % 1000 == 0:
         redis_db.set(str(color + '_transitivity'), transitivity)
-        # print("Edge Res: " + str(self.edge_res))
 
     def __update__(self, new_edge, color):
 
@@ -163,10 +159,6 @@ class StreamingTriangles(threading.Thread):
                     w = random.choice(new_wedges)
                     self.wedge_res[color][i] = w
                     self.is_closed[color][i] = False
-
-        # print(self.edge_res)
-        # print(wedge_res)
-        # print(is_closed)
 
         return np.sum(self.is_closed[color])/float(len(self.is_closed[color]))
 
@@ -221,5 +213,5 @@ if __name__ == "__main__":
             thread.start()
             print("Started Kafka consumer.")
         else:
-            print("Listening for new messages in topic: 'Venmo-Transactions-Dev'...")
+            print("Listening for new messages in topic: 'venmo-transactions'...")
             time.sleep(15)
