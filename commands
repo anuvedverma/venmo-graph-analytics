@@ -4,10 +4,10 @@
 /usr/local/kafka/bin/kafka-topics.sh --list --zookeeper localhost:2181
 
 # To create new Kafka topic
-/usr/local/kafka/bin/kafka-topics.sh --create --zookeeper localhost:2181 --replication-factor 1 --partitions 1 --topic Venmo-Transactions-Dev
+/usr/local/kafka/bin/kafka-topics.sh --create --zookeeper localhost:2181 --replication-factor 1 --partitions 1 --topic venmo-transactions
 
 # To view Kafka topic contents
-/usr/local/kafka/bin/kafka-console-consumer.sh --zookeeper localhost:2181 --topic Venmo-Transactions-Dev
+/usr/local/kafka/bin/kafka-console-consumer.sh --zookeeper localhost:2181 --topic venmo-transactions
 
 # To view Kafka topic contents from beginning
 /usr/local/kafka/bin/kafka-console-consumer.sh --zookeeper localhost:2181 --from-beginning --topic Venmo-Transactions-Dev

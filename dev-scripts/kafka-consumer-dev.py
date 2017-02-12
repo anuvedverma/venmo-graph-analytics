@@ -9,12 +9,13 @@ import json
 import numpy as np
 import redis
 from kafka import KafkaConsumer
+from pymoji import PyMoji
 
 RED = 'red'
 BLUE = 'blue'
 YELLOW = 'yellow'
 GREEN = 'green'
-BLACK = 'black'
+
 
 class StreamingTriangles(threading.Thread):
     daemon = True
@@ -32,32 +33,27 @@ class StreamingTriangles(threading.Thread):
         self.edge_count = {RED: 0,
                            BLUE: 0,
                            YELLOW: 0,
-                           GREEN: 0,
-                           BLACK: 0}
+                           GREEN: 0}
 
         self.total_wedges = {RED: 0,
                            BLUE: 0,
                            YELLOW: 0,
-                           GREEN: 0,
-                           BLACK: 0}
+                           GREEN: 0}
 
         self.edge_res = {RED: [list(tuple((0, 0))) for _ in xrange(self.edge_res_size)],
                          BLUE: [list(tuple((0, 0))) for _ in xrange(self.edge_res_size)],
                          YELLOW: [list(tuple((0, 0))) for _ in xrange(self.edge_res_size)],
-                         GREEN: [list(tuple((0, 0))) for _ in xrange(self.edge_res_size)],
-                         BLACK: [list(tuple((0, 0))) for _ in xrange(self.edge_res_size)]}
+                         GREEN: [list(tuple((0, 0))) for _ in xrange(self.edge_res_size)]}
 
         self.wedge_res = {RED: [list(tuple((0, 0, 0))) for _ in xrange(self.wedge_res_size)],
                           BLUE: [list(tuple((0, 0, 0))) for _ in xrange(self.wedge_res_size)],
                           YELLOW: [list(tuple((0, 0, 0))) for _ in xrange(self.wedge_res_size)],
-                          GREEN: [list(tuple((0, 0, 0))) for _ in xrange(self.wedge_res_size)],
-                          BLACK: [list(tuple((0, 0, 0))) for _ in xrange(self.wedge_res_size)]}
+                          GREEN: [list(tuple((0, 0, 0))) for _ in xrange(self.wedge_res_size)]}
 
         self.is_closed = {RED: [False for _ in xrange(self.wedge_res_size)],
                           BLUE: [False for _ in xrange(self.wedge_res_size)],
                           YELLOW: [False for _ in xrange(self.wedge_res_size)],
-                          GREEN: [False for _ in xrange(self.wedge_res_size)],
-                          BLACK: [False for _ in xrange(self.wedge_res_size)]}
+                          GREEN: [False for _ in xrange(self.wedge_res_size)]}
 
     # Thread sets up consumer and consumes kafka messages
     def run(self):
@@ -71,52 +67,68 @@ class StreamingTriangles(threading.Thread):
             new_edge = self.__extract_edge__(msg)
             colors = self.__analyze_message__(msg)
             for color in colors:
-                if colors[color] == True:
+                print(color + ": " + msg)
+                if colors[color]:
                     self.__streaming_triangles__(self.redis_db, new_edge, color)
-            # self.__incTypeCount__(self.hbase.table('anuvedverma_crimes_by_type'), crime_type)
-            # print (msg)
 
     def __analyze_message__(self, json_obj):
         json_data = json.loads(json_obj)
         message = json_data['message'] # message data
 
+        moji = PyMoji()
+        message = moji.encode(message)
+        if isinstance(message, str):
+            message = unicode(message, "utf-8")
+        message = message.encode('utf-8').lower()
+
+        # Define categorization rules
+        foods = ["[:pizza]", "[:hamburger]", "pizza", "food", "burrito",
+                 "[:fries]", "[:ramen]", "tacos", "dinner", "lunch",
+                 "[:spaghetti]", "[:poultry_leg]", "breakfast",
+                 "[:sushi]"]
+        drinks = ["[:wine_glass]", "[:cocktail]", "[:tropical_drink]",
+                  "[:beer]", "[:beers]", "[:tada]", "drinks"]
+        transportation = ["[:taxi]", "[:oncoming_taxi]", "[:car]",
+                          "[:oncoming_automobile]", "taxi", "uber", "lyft"]
+        bills = ["[:bulb]", "[:moneybag]", "[:potable_water]",
+                 "[:house_with_garden]", "[:house]", " bill",
+                 "rent", "internet", "utilities", "pg&e", "dues", "cable"]
+
         color_map = {}
         # Insert real analysis here
-        if random.uniform(0, 1) < 0.75:
+        # if random.uniform(0, 1) < 0.75:
+        if any(food in message for food in foods):
             color_map[RED] = True
         else:
             color_map[RED] = False
 
-        if random.uniform(0, 1) < 0.25:
+        # if random.uniform(0, 1) < 0.25:
+        if any(drink in message for drink in drinks):
             color_map[BLUE] = True
         else:
             color_map[BLUE] = False
 
-        if random.uniform(0, 1) < 0.5:
+        # if random.uniform(0, 1) < 0.5:
+        if any(transport in message for transport in transportation):
             color_map[YELLOW] = True
         else:
             color_map[YELLOW] = False
 
-        if random.uniform(0, 1) < 0.1:
+        # if random.uniform(0, 1) < 0.1:
+        if any(bill in message for bill in bills):
             color_map[GREEN] = True
         else:
             color_map[GREEN] = False
-
-        if random.uniform(0, 1) < 0.33:
-            color_map[BLACK] = True
-        else:
-            color_map[BLACK] = False
 
         # Update color_map based on analysis results
         output = {RED: color_map[RED],
                   BLUE: color_map[BLUE],
                   YELLOW: color_map[YELLOW],
-                  GREEN: color_map[GREEN],
-                  BLACK: color_map[BLACK]}
+                  GREEN: color_map[GREEN]}
         return output
 
     def __streaming_triangles__(self, redis_db, new_edge, color):
-        k = self.__update__(redis_db, new_edge, color)
+        k = self.__update__(new_edge, color)
         transitivity = 3 * k
         print("Transitivity @ " + color + " edge #" + str(self.edge_count[color]) + ": " + str(transitivity))
         print("Total "  + color + " wedges: " + str(self.total_wedges[color]))
@@ -124,7 +136,7 @@ class StreamingTriangles(threading.Thread):
         redis_db.set(str(color + '_transitivity'), transitivity)
         # print("Edge Res: " + str(self.edge_res))
 
-    def __update__(self, redis_db, new_edge, color):
+    def __update__(self, new_edge, color):
 
         self.edge_count[color] += 1
         updated_edge_res = False

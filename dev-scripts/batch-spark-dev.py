@@ -8,6 +8,7 @@ from pyspark.sql import SparkSession
 from pyspark.streaming import StreamingContext
 from pyspark.streaming.kafka import KafkaUtils
 from botocore.exceptions import ClientError
+from kafka import KafkaProducer
 from sets import Set
 # import boto3
 import redis
@@ -116,7 +117,7 @@ def analyze_message(message):
     # print(message)
 
     # Define categorization rules
-    foods = ["[:pizza]", "[:hamburger]", "pizza", "food", "burrito"
+    foods = ["[:pizza]", "[:hamburger]", "pizza", "food", "burrito",
              "[:fries]", "[:ramen]", "tacos", "dinner", "lunch",
              "[:spaghetti]", "[:poultry_leg]", "breakfast",
              "[:sushi]"]
@@ -129,6 +130,11 @@ def analyze_message(message):
              "rent", "internet", "utilities", "pg&e", "dues", "cable"]
 
     colors = Set([])
+
+    # Testing Kafka producer
+    if True:
+        colors.add(RED)
+        colors.add(BLUE)
 
     # Check for food-related content
     if any(food in message for food in foods):
@@ -185,11 +191,17 @@ def send_to_redis(rdd):
     # redis_server = 'localhost' # Set Redis connection (cluster)
     redis_db = redis.StrictRedis(host=redis_server, port=6379, db=0)
 
+    # Kafka connection
+    # producer = KafkaProducer(bootstrap_servers='52.35.109.64:9092', value_serializer=lambda v: json.dumps(v).encode('utf-8'))
+    # producer.send('venmo-transactions', rdd)
+
     for record in rdd:
         color = record[0]
         edge_list = record[1]
 
+        # print("Record: " + str(record))
         print("Sending partition...")
+        # producer.send('venmo-transactions', record)
         redis_db.lpush(color, *edge_list)
 
         print("Successfully put " + str(redis_db.lrange(color, 0, len(edge_list)-1)) + " into Redis")
@@ -219,6 +231,6 @@ if __name__ == "__main__":
     # color_grouped_rdd.foreachPartition(lambda x: send_to_rethink(x))
 
     # output = colored_rdd.take(500)
-    colored_rdd_count = colored_rdd.count()
-    filtered_rdd_count = filtered_rdd.count()
-    color_grouped_rdd_count = color_grouped_rdd.count()
+    # colored_rdd_count = colored_rdd.count()
+    # filtered_rdd_count = filtered_rdd.count()
+    # color_grouped_rdd_count = color_grouped_rdd.count()
