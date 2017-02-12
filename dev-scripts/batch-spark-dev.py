@@ -186,10 +186,6 @@ def send_to_redis(rdd):
     # redis_server = 'localhost' # Set Redis connection (cluster)
     redis_db = redis.StrictRedis(host=redis_server, port=6379, db=0)
 
-    # Kafka connection
-    # producer = KafkaProducer(bootstrap_servers='52.35.109.64:9092', value_serializer=lambda v: json.dumps(v).encode('utf-8'))
-    # producer.send('venmo-transactions', rdd)
-
     for record in rdd:
         color = record[0]
         edge_list = record[1]
@@ -210,9 +206,10 @@ if __name__ == "__main__":
     sc = SparkContext(appName="Venmo-Graph-Analytics-Dev")
 
     # Read data from S3
+    read_rdd = sc.textFile("s3n://venmo-json/2017_01/venmo_2017_01_30.json")
     # read_rdd = sc.textFile("s3n://venmo-json/2017_01/*")
     # read_rdd = sc.textFile("s3n://venmo-json/2011_01/*")
-    read_rdd = sc.textFile("s3n://venmo-json/2013_01/*")
+    # read_rdd = sc.textFile("s3n://venmo-json/2013_01/*")
 
     # Clean and filter data
     cleaned_rdd = read_rdd.map(lambda x: extract_data(x)).filter(lambda x: filter_nones(x)) # clean json data
@@ -223,9 +220,3 @@ if __name__ == "__main__":
 
     # Send data to DBs
     color_grouped_rdd.foreachPartition(lambda x: send_to_redis(x))
-    # color_grouped_rdd.foreachPartition(lambda x: send_to_rethink(x))
-
-    # output = colored_rdd.take(500)
-    # colored_rdd_count = colored_rdd.count()
-    # filtered_rdd_count = filtered_rdd.count()
-    # color_grouped_rdd_count = color_grouped_rdd.count()

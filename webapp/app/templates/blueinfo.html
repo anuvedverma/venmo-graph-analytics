@@ -4,8 +4,8 @@
 <script src="//d3js.org/d3.v3.min.js"></script>
 <script>
 
-//var width = screen.width,
-//    height = screen.height/2;
+var width = screen.width,
+    height = screen.height;
 
 var radius = 0.003;
 
@@ -21,10 +21,12 @@ d3.json("/static/blue_graph.json", function (data) {
 
         link.target = nodes[link.target] ||
             (nodes[link.target] = {name: link.target});
+
+        link.cycle = link.cycle;
     });
 
-    var width = screen.width,
-        height = Math.min(1000 * (links.length * 0.02), screen.height);
+//    var width = screen.width,
+//        height = Math.min(1000 * (links.length * 0.02), screen.height);
 
     // add svg to body
     var svg = d3.select('body').append('svg')
@@ -36,13 +38,17 @@ d3.json("/static/blue_graph.json", function (data) {
         .nodes(d3.values(nodes))
         .links(links)
         .on("tick", tick)
-        .linkDistance(150)
+        .linkDistance(15)
         .start();
 
     var link = svg.selectAll('.link')
         .data(links)
         .enter().append('line')
         .attr('class', 'link');
+
+    if(link.cycle == true) {
+        link.attr('class', 'cycle_link');
+    }
 
     var node = svg.selectAll('.blue_node')
         .data(force.nodes())

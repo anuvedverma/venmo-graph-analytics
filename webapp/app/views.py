@@ -86,22 +86,26 @@ def community_info():
 
 @app.route('/redinfo')
 def red_info():
-    return generate_response(RED)
+    response = generate_response(RED)
+    return render_template("/redinfo.html", output=response)
 
 
 @app.route('/blueinfo')
 def blue_info():
-    return generate_response(BLUE)
+    response = generate_response(BLUE)
+    return render_template("/blueinfo.html", output=response)
 
 
 @app.route('/yellowinfo')
 def yellow_info():
-    return generate_response(YELLOW)
+    response = generate_response(YELLOW)
+    return render_template("/yellowinfo.html", output=response)
 
 
 @app.route('/greeninfo')
 def green_info():
-    return generate_response(GREEN)
+    response = generate_response(GREEN)
+    return render_template("/greeninfo.html", output=response)
 
 
 def generate_response(color):
@@ -119,7 +123,7 @@ def generate_response(color):
                      "approx_transitivity": float(approx_transitivity),
                      "exact_transitivity": float(exact_transitivity)}
 
-    return render_template("/" + color + "info.html", output=response_dict)
+    return response_dict
 
 
 def process_graph(edges):
@@ -128,10 +132,14 @@ def process_graph(edges):
 
     graph = nx.Graph()
     graph.add_edges_from(edges)
+    transitivity = nx.transitivity(graph)
+    # transitivity = nx.average_clustering(graph)
 
     remove = [edge for edge in edges if graph.degree(edge[0]) < 2 and graph.degree(edge[1]) < 2]
     graph.remove_edges_from(remove)
-    transitivity = nx.transitivity(graph)
+
+    # cycle_edges = list(nx.find_cycle(graph, orientation='ignore'))
+    # print(cycle_edges)
 
     response = []
     for edge in graph.edges():
@@ -144,6 +152,13 @@ def process_graph(edges):
 @app.route('/usersearch')
 def user_search():
     return render_template("usersearch.html")
+
+
+@app.route('/clustertest')
+def cluster_test():
+    response = generate_response(BLUE)
+    return render_template("/clustertest.html", output=response)
+
 
 
 @app.route('/realtime')

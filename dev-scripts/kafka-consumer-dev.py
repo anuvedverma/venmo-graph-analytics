@@ -10,6 +10,8 @@ import numpy as np
 import redis
 from kafka import KafkaConsumer
 from pymoji import PyMoji
+from pybloom import ScalableBloomFilter
+from sets import Set
 
 RED = 'red'
 BLUE = 'blue'
@@ -29,6 +31,7 @@ class StreamingTriangles(threading.Thread):
 
         self.edge_res_size = 20000
         self.wedge_res_size = 20000
+        self.bloom_filter = ScalableBloomFilter(mode=ScalableBloomFilter.SMALL_SET_GROWTH)
 
         self.edge_count = {RED: 0,
                            BLUE: 0,
@@ -67,9 +70,10 @@ class StreamingTriangles(threading.Thread):
             new_edge = self.__extract_edge__(msg)
             colors = self.__analyze_message__(msg)
             for color in colors:
-                print(color + ": " + msg)
-                if colors[color]:
+                colored_edge = tuple((color, new_edge))
+                if colored_edge not in self.bloom_filter:
                     self.__streaming_triangles__(self.redis_db, new_edge, color)
+                    self.bloom_filter.add(colored_edge)
 
     def __analyze_message__(self, json_obj):
         json_data = json.loads(json_obj)
@@ -80,6 +84,7 @@ class StreamingTriangles(threading.Thread):
         if isinstance(message, str):
             message = unicode(message, "utf-8")
         message = message.encode('utf-8').lower()
+        print(message)
 
         # Define categorization rules
         foods = ["[:pizza]", "[:hamburger]", "pizza", "food", "burrito",
@@ -94,38 +99,26 @@ class StreamingTriangles(threading.Thread):
                  "[:house_with_garden]", "[:house]", " bill",
                  "rent", "internet", "utilities", "pg&e", "dues", "cable"]
 
-        color_map = {}
-        # Insert real analysis here
-        # if random.uniform(0, 1) < 0.75:
+        colors = Set([])
+
+        # Check for food-related content
         if any(food in message for food in foods):
-            color_map[RED] = True
-        else:
-            color_map[RED] = False
+            colors.add(RED)
 
-        # if random.uniform(0, 1) < 0.25:
+        # Check for drink-related content
         if any(drink in message for drink in drinks):
-            color_map[BLUE] = True
-        else:
-            color_map[BLUE] = False
+            colors.add(BLUE)
 
-        # if random.uniform(0, 1) < 0.5:
+        # Check for transportation-related content
         if any(transport in message for transport in transportation):
-            color_map[YELLOW] = True
-        else:
-            color_map[YELLOW] = False
+            colors.add(YELLOW)
 
-        # if random.uniform(0, 1) < 0.1:
+        # Check for transportation-related content
         if any(bill in message for bill in bills):
-            color_map[GREEN] = True
-        else:
-            color_map[GREEN] = False
+            colors.add(GREEN)
 
-        # Update color_map based on analysis results
-        output = {RED: color_map[RED],
-                  BLUE: color_map[BLUE],
-                  YELLOW: color_map[YELLOW],
-                  GREEN: color_map[GREEN]}
-        return output
+        return colors
+
 
     def __streaming_triangles__(self, redis_db, new_edge, color):
         k = self.__update__(new_edge, color)
@@ -167,7 +160,8 @@ class StreamingTriangles(threading.Thread):
         json_data = json.loads(json_obj)
         from_id = int(json_data['actor']['id']) # Sender data
         to_id = int(json_data['transactions'][0]['target']['id']) # Receiver data
-        return tuple((from_id, to_id))
+        edge = sorted(tuple((from_id, to_id)))
+        return edge
 
     # Extract wedge from adjacent edges
     def __get_wedge__(self, edge1, edge2):

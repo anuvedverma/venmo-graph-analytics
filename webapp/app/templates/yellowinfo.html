@@ -39,7 +39,7 @@ d3.json("/static/yellow_graph.json", function (data) {
         .nodes(d3.values(nodes))
         .links(links)
         .on("tick", tick)
-        .linkDistance(150)
+        .linkDistance(15)
         .start();
 
     var link = svg.selectAll('.link')

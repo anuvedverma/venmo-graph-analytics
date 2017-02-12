@@ -4,8 +4,8 @@
 <script src="//d3js.org/d3.v3.min.js"></script>
 <script>
 
-//var width = screen.width,
-//    height = screen.height/2;
+var width = screen.width,
+    height = screen.height + 200;
 
 var radius = 0.003;
 
@@ -23,8 +23,8 @@ d3.json("/static/green_graph.json", function (data) {
             (nodes[link.target] = {name: link.target});
     });
 
-    var width = screen.width,
-        height = Math.min(1000 * (links.length * 0.02), screen.height);
+//    var width = screen.width,
+//        height = Math.min(1000 * (links.length * 0.02), screen.height);
 
     console.log(links);
 
@@ -38,7 +38,7 @@ d3.json("/static/green_graph.json", function (data) {
         .nodes(d3.values(nodes))
         .links(links)
         .on("tick", tick)
-        .linkDistance(150)
+        .linkDistance(15)
         .start();
 
     var link = svg.selectAll('.link')

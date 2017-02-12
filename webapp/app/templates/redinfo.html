@@ -5,7 +5,7 @@
 <script>
 
 var width = screen.width,
-    height = screen.height;
+    height = screen.height + 200;
 
 var radius = 0.003;
 
@@ -37,7 +37,7 @@ d3.json("/static/red_graph.json", function (data) {
         .nodes(d3.values(nodes))
         .links(links)
         .on("tick", tick)
-        .linkDistance(150)
+        .linkDistance(15)
         .start();
 
     var link = svg.selectAll('.link')
