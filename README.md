@@ -4,7 +4,7 @@
 2. [Pipeline](README.md#Pipeline)
 3. [Directory Structure](README.md#directory-structure)
 
-<img src="./images/graph.png" width="800">
+<img src="./docs/graph.png" width="800">
 
 ##Overview
 Following is my project for the Insight Data Engineering- Silicon Valley Winter 2017 fellowship.
@@ -25,7 +25,7 @@ Initially, my implementation of the streaming transitivity algorithm returned ex
 
 
 ##Pipeline
-<img src="./images/pipeline.png" width="800">
+<img src="./docs/pipeline.png" width="800">
 
 Historical Venmo data is stored on Amazon S3, which I used for batch processes as well as simulated streams. 
 

@@ -145,21 +145,14 @@ def filter_blacks(transaction_data):
 
 
 # Send data to Redis databases
-def send_to_redis(rdd):
+def send_to_redis(color_counts):
 
     # Redis connection
     redis_server = 'ec2-52-35-109-64.us-west-2.compute.amazonaws.com' # Set Redis connection
     redis_db = redis.StrictRedis(host=redis_server, port=6379, db=0)
 
-    for record in rdd:
-        color = record[0]
-        count = record[1]
-
-        print("Sending partition...")
-        # redis_db.lpush(color, *edge_list)
-        redis_db.set('num_' + color + '_large', count)
-
-        print("Successfully put " + str(redis_db.get(color)) + " into Redis")
+    for color in color_counts:
+        redis_db.set('num_' + color + '_large', color_counts[color])
 
 
 # To Run:
@@ -176,8 +169,8 @@ if __name__ == "__main__":
     cleaned_rdd = read_rdd.map(lambda x: extract_data(x)).filter(lambda x: filter_nones(x)) # clean json data
     colored_rdd = cleaned_rdd.flatMap(lambda x: color_messages(x)) # classify messages with color
     filtered_rdd = colored_rdd.filter(lambda x: filter_blacks(x)) # filter out black edges
-    color_count_rdd = filtered_rdd.map(lambda x: (x[0], [tuple((x[1], x[2]))]))\
+    color_count = filtered_rdd.map(lambda x: (x[0], [tuple((x[1], x[2]))]))\
         .countByKey() # count number of edges for each color
 
     # Send data to DBs
-    color_count_rdd.foreachPartition(lambda x: send_to_redis(x))
+    send_to_redis(color_count)

@@ -170,7 +170,7 @@ if __name__ == "__main__":
     sc = SparkContext(appName="Venmo-Graph-Analytics")
 
     # Read data from S3
-    read_rdd = sc.textFile("s3n://venmo-json/2013_01")
+    read_rdd = sc.textFile("s3n://venmo-json/2013_01/*")
 
     # Clean and filter data
     cleaned_rdd = read_rdd.map(lambda x: extract_data(x)).filter(lambda x: filter_nones(x)) # clean json data
