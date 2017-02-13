@@ -46,10 +46,10 @@ def index():
     finally:
         f.close()
 
-    num_red_transactions = redis_db.llen(RED)
-    num_blue_transactions = redis_db.llen(BLUE)
-    num_yellow_transactions = redis_db.llen(YELLOW)
-    num_green_transactions = redis_db.llen(GREEN)
+    num_red_transactions = redis_db.llen(RED + '_large')
+    num_blue_transactions = redis_db.llen(BLUE + '_large')
+    num_yellow_transactions = redis_db.llen(YELLOW + '_large')
+    num_green_transactions = redis_db.llen(GREEN + '_large')
 
     csv_path = str(os.path.join(app.root_path, 'static'))
     f = open(csv_path + "/transaction_counts.csv", 'w+')

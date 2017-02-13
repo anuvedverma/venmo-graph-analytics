@@ -29,8 +29,8 @@ class StreamingTriangles(threading.Thread):
         self.redis_server = 'localhost'
         self.redis_db = redis.StrictRedis(host=self.redis_server, port=6379, db=0)
 
-        self.edge_res_size = 20000
-        self.wedge_res_size = 20000
+        self.edge_res_size = 40000
+        self.wedge_res_size = 40000
         self.bloom_filter = ScalableBloomFilter(mode=ScalableBloomFilter.SMALL_SET_GROWTH)
 
         self.edge_count = {RED: 0,

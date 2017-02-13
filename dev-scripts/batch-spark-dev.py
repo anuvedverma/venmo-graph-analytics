@@ -28,54 +28,33 @@ def extract_data(json_body):
 
     json_body = json.loads(json_body)
 
-    # Sender data
-    from_id = json_body['actor']['id']
-    from_firstname = json_body['actor']['firstname']
-    from_lastname = json_body['actor']['lastname']
-    from_username = json_body['actor']['username']
-    from_picture = json_body['actor']['picture']
+    # print(json_body)
 
-    # Receiver data
-    if 'id' in json_body['transactions'][0]['target']:
+    try:
+        # Sender data
+        from_id = json_body['actor']['id']
+        from_firstname = json_body['actor']['firstname']
+        from_lastname = json_body['actor']['lastname']
+        from_username = json_body['actor']['username']
+        from_picture = json_body['actor']['picture']
+        is_business = json_body['actor']['is_business']
+
+        # Receiver data
         to_id = json_body['transactions'][0]['target']['id']
-    else:
-        return None
-    if 'firstname' in json_body['transactions'][0]['target']:
         to_firstname = json_body['transactions'][0]['target']['firstname']
-    else:
-        to_firstname = "N/A"
-    if 'lastname' in json_body['transactions'][0]['target']:
         to_lastname = json_body['transactions'][0]['target']['lastname']
-    else:
-        to_lastname = "N/A"
-    if 'username' in json_body['transactions'][0]['target']:
         to_username = json_body['transactions'][0]['target']['username']
-    else:
-        return None
-    if 'picture' in json_body['transactions'][0]['target']:
         to_picture = json_body['transactions'][0]['target']['picture']
-    else:
-        to_picture = "N/A"
+        is_business = is_business or json_body['transactions'][0]['target']['is_business']
 
-    # Transaction data
-    message = json_body['message']
-    timestamp = json_body['created_time']
+        if is_business is True:
+            return None
 
-    # Filter out invalid values
-    if not from_picture:
-        from_username = 'N/A'
-    if not to_picture:
-        to_picture = 'N/A'
-
-    if not from_firstname:
-        from_firstname = 'N/A'
-    if not to_firstname:
-        to_firstname = 'N/A'
-
-    if not from_lastname:
-        from_lastname = 'N/A'
-    if not to_lastname:
-        to_lastname = 'N/A'
+        # Transaction data
+        message = json_body['message']
+        timestamp = json_body['created_time']
+    except:
+        return None
 
     # Output data dictionary
     data = {'from_id': int(from_id),
@@ -98,8 +77,6 @@ def color_messages(transaction_data):
     user2 = transaction_data['to_id']
     message = transaction_data['message']
     colors = analyze_message(message)
-    # print("MESSAGE: " + message)
-    # print("COLOR: " + str(colors))
 
     results = []
     for color in colors:
@@ -119,7 +96,7 @@ def analyze_message(message):
     foods = ["pizza", "hamburger", "food", "burrito", "chinese", "indian",
              "fries", "ramen", "taco", "dinner", "lunch",
              "spaghetti", "poultry_leg", "breakfast", "sushi"]
-    drinks = ["wine", "cocktail", "drink", " bar"
+    drinks = ["wine", "cocktail", "drink", " bar", "alcohol",
               "beer", "[:tada]", "club", "vegas"]
     transportation = ["taxi", "[:car]", "[:oncoming_automobile]",
                       "uber", "lyft", "ride", "drive", "driving"]
@@ -176,10 +153,9 @@ def send_to_redis(rdd):
         color = record[0]
         edge_list = record[1]
 
-        # print("Record: " + str(record))
         print("Sending partition...")
-        # producer.send('venmo-transactions', record)
-        redis_db.lpush(color, *edge_list)
+        # redis_db.lpush(color, *edge_list)
+        redis_db.lpush(color + '_large', *edge_list)
 
         print("Successfully put " + str(redis_db.lrange(color, 0, len(edge_list)-1)) + " into Redis")
 
@@ -192,10 +168,9 @@ if __name__ == "__main__":
     sc = SparkContext(appName="Venmo-Graph-Analytics-Dev")
 
     # Read data from S3
-    read_rdd = sc.textFile("s3n://venmo-json/2017_01/venmo_2013_02.json")
     # read_rdd = sc.textFile("s3n://venmo-json/2017_01/*")
     # read_rdd = sc.textFile("s3n://venmo-json/2011_01/*")
-    # read_rdd = sc.textFile("s3n://venmo-json/2013_01/*")
+    read_rdd = sc.textFile("s3n://venmo-json/2013_01/*")
 
     # Clean and filter data
     cleaned_rdd = read_rdd.map(lambda x: extract_data(x)).filter(lambda x: filter_nones(x)) # clean json data

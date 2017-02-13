@@ -22,8 +22,8 @@ class Producer(threading.Thread):
         bucket_name = 'venmo-json'
         bucket = self.__get_s3_bucket__(bucket_name)
         # for obj in bucket.objects.filter(Prefix='2017_02'):
-        # for obj in bucket.objects.filter(Prefix='2013_01'):
-        for obj in bucket.objects.filter(Prefix='2017_01/venmo_2017_01_30.json'):
+        for obj in bucket.objects.filter(Prefix='2013_01'):
+        # for obj in bucket.objects.filter(Prefix='2017_01'):
             data = obj.get()['Body']
             json_body = data.read().splitlines()
             for json_obj in json_body:

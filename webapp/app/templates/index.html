@@ -87,7 +87,7 @@ var transitivity_tip = d3.tip()
   .attr('class', 'd3-tip')
   .offset([-10, 0])
   .html(function(d) {
-    return "<strong>Transitivity:</strong> <span style='color:#fffc16'>" + d.transitivity + "</span>";
+    return "<strong>Transitivity:</strong> <span style='color:#fffc16'>" + d.transitivity.toFixed(3) + "</span>";
   });
 
 var svg = d3.select("#transitivity_chart").append("svg")

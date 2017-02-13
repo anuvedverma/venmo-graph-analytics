@@ -21,6 +21,7 @@ sudo $SPARK_HOME/bin/spark-submit dev-scripts/batch-spark-dev.py
 # To run Spark Batch (cluster)
 spark-submit batch-spark-dev.py # standalone
 spark-submit --master spark://ip-172-31-0-134:7077 batch-spark-dev.py # using workers
+nohup spark-submit --master spark://ip-172-31-0-134:7077 batch-spark-dev.py & # in background
 
 # To run Spark Stream with Kafka consumer (cluster)
 spark-submit --packages org.apache.spark:spark-streaming-kafka-0-8_2.11:2.1.0 dev-scripts/kafka-spark-dev.py
