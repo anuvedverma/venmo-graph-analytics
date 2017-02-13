@@ -29,8 +29,6 @@ def extract_data(json_body):
 
     json_body = json.loads(json_body)
 
-    # print(json_body)
-
     try:
         # Sender data
         from_id = json_body['actor']['id']
@@ -73,6 +71,7 @@ def extract_data(json_body):
     return data
 
 
+# Generate colored edge
 def color_messages(transaction_data):
     user1 = transaction_data['from_id']
     user2 = transaction_data['to_id']
@@ -86,6 +85,7 @@ def color_messages(transaction_data):
     return results
 
 
+# Assign colors to message based on emoji/text content
 def analyze_message(message):
     moji = PyMoji()
     message = moji.encode(message)
@@ -130,24 +130,25 @@ def analyze_message(message):
     return colors
 
 
+# Filter out nones
 def filter_nones(transaction_data):
     if transaction_data is not None:
         return True
     return False
 
 
+# Filter out uncategorized/uncolored messages
 def filter_blacks(transaction_data):
     if transaction_data[0] == BLACK:
         return False
     return True
 
 
-# Send data to RethinkDB/Redis databases
+# Send data to Redis databases
 def send_to_redis(rdd):
 
     # Redis connection
     redis_server = 'ec2-52-35-109-64.us-west-2.compute.amazonaws.com' # Set Redis connection
-    # redis_server = 'localhost' # Set Redis connection (cluster)
     redis_db = redis.StrictRedis(host=redis_server, port=6379, db=0)
 
     for record in rdd:
@@ -162,16 +163,14 @@ def send_to_redis(rdd):
 
 
 # To Run:
-# sudo $SPARK_HOME/bin/spark-submit --packages org.apache.spark:spark-streaming-kafka-0-8_2.11:2.1.0 kafka-spark-test.py
+# spark-submit -- master <ip addres of master node> --executor-memory <allocate memory for executor> spark-batch-edges.py
 if __name__ == "__main__":
 
     # Set Spark context
-    sc = SparkContext(appName="Venmo-Graph-Analytics-Dev")
+    sc = SparkContext(appName="Venmo-Graph-Analytics")
 
     # Read data from S3
-    # read_rdd = sc.textFile("s3n://venmo-json/2017_01/*")
-    # read_rdd = sc.textFile("s3n://venmo-json/2011_01/*")
-    read_rdd = sc.textFile("s3n://venmo-json/2013_01/*")
+    read_rdd = sc.textFile("s3n://venmo-json/2013_01")
 
     # Clean and filter data
     cleaned_rdd = read_rdd.map(lambda x: extract_data(x)).filter(lambda x: filter_nones(x)) # clean json data

@@ -141,12 +141,15 @@ function transitivity_type(d) {
 <br/>
 <br/>
 
-<div class="container" id="count_chart" style="margin: auto">
+<div class="container" id="ratio_chart" style="margin: auto">
         <script>
 
 var margin = {top: 20, right: 0, bottom: 30, left: 150},
     width = 960 - margin.left - margin.right,
     height = 500 - margin.top - margin.bottom;
+
+
+var formatPercent = d3.format(".0%");
 
 var x = d3.scale.ordinal()
     .rangeRoundBands([0, width], .1);
@@ -160,16 +163,17 @@ var xAxis = d3.svg.axis()
 
 var yAxis = d3.svg.axis()
     .scale(y)
-    .orient("left");
+    .orient("left")
+    .tickFormat(formatPercent);
 
 var tip = d3.tip()
   .attr('class', 'd3-tip')
   .offset([-10, 0])
   .html(function(d) {
-    return "<strong>Count:</strong> <span style='color:#fffc16'>" + d.count + "</span>";
+    return "<strong>Ratio:</strong> <span style='color:#fffc16'>" + (d.ratio*100).toFixed(3) + "%</span>";
   });
 
-var svg2 = d3.select("#count_chart").append("svg")
+var svg2 = d3.select("#ratio_chart").append("svg")
     .attr("width", width + margin.left + margin.right)
     .attr("height", height + margin.top + margin.bottom)
     .append("g")
@@ -178,9 +182,9 @@ var svg2 = d3.select("#count_chart").append("svg")
 
 svg2.call(tip);
 
-d3.csv("static/transaction_counts.csv", count_type, function(error, data) {
+d3.csv("static/transaction_ratios.csv", ratio_type, function(error, data) {
   x.domain(data.map(function(d) { return d.transaction_type; }));
-  y.domain([0, d3.max(data, function(d) { return d.count; })]);
+  y.domain([0, d3.max(data, function(d) { return d.ratio; })]);
   svg2.append("g")
       .attr("class", "x axis")
       .attr("transform", "translate(0," + height + ")")
@@ -193,21 +197,21 @@ d3.csv("static/transaction_counts.csv", count_type, function(error, data) {
       .attr("y", 6)
       .attr("dy", ".71em")
       .style("text-anchor", "end")
-      .text("Count");
+      .text("Ratio");
   svg2.selectAll(".bar")
       .data(data)
     .enter().append("rect")
       .attr("class", "bar")
       .attr("x", function(d) { return x(d.transaction_type); })
       .attr("width", x.rangeBand())
-      .attr("y", function(d) { return y(d.count); })
-      .attr("height", function(d) { return height - y(d.count); })
+      .attr("y", function(d) { return y(d.ratio); })
+      .attr("height", function(d) { return height - y(d.ratio); })
       .on('mouseover', tip.show)
       .on('mouseout', tip.hide);
 });
 
-function count_type(d) {
-  d.count = +d.count;
+function ratio_type(d) {
+  d.ratio = +d.ratio;
   return d;
 }
 </script>

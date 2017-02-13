@@ -1,0 +1,11 @@
+vol_type: standard
+purchase_type: on_demand
+subnet_id: subnet-dd4695ba
+num_instances: 1
+key_name: anuved-verma
+security_group_ids: sg-db86e1a3
+instance_type: m4.large
+tag_name: anuvedverma-spark-cluster
+vol_size: 100
+role: master
+use_eips: true

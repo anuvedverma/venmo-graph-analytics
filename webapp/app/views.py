@@ -25,41 +25,52 @@ redis_server = 'ec2-52-35-109-64.us-west-2.compute.amazonaws.com'
 redis_db = redis.StrictRedis(host=redis_server, port=6379, db=0)
 
 
+# Homepage for large-scale Venmo community analysis
 @app.route('/')
 @app.route('/index')
 def index():
+
+    # Get approx. transitivity for all 2017 venmo data
     red_transitivity = float(redis_db.get(RED + '_transitivity_large'))
     blue_transitivity = float(redis_db.get(BLUE + '_transitivity_large'))
     yellow_transitivity = float(redis_db.get(YELLOW + '_transitivity_large'))
     green_transitivity = float(redis_db.get(GREEN + '_transitivity_large'))
 
+    # Write to local CSV file for D3 visualization
     csv_path = str(os.path.join(app.root_path, 'static'))
     f = open(csv_path + "/transitivity.csv", 'w+')
     try:
         writer = csv.writer(f)
         writer.writerow(['transaction_type', 'transitivity'])
-        writer.writerow(['Food', red_transitivity/10])
-        writer.writerow(['Drinks', (blue_transitivity/10)])
-        writer.writerow(['Transportation', (yellow_transitivity/10)])
-        writer.writerow(['Bills', (green_transitivity/10)])
+        writer.writerow(['Food', red_transitivity])
+        writer.writerow(['Drinks', (blue_transitivity)])
+        writer.writerow(['Transportation', (yellow_transitivity)])
+        writer.writerow(['Bills', (green_transitivity)])
         f.flush()
     finally:
         f.close()
 
-    num_red_transactions = redis_db.llen(RED + '_large')
-    num_blue_transactions = redis_db.llen(BLUE + '_large')
-    num_yellow_transactions = redis_db.llen(YELLOW + '_large')
-    num_green_transactions = redis_db.llen(GREEN + '_large')
+    # Get ratios of transaction types for all 2017 venmo data
+    num_red_transactions = float(redis_db.get('num_' + RED + '_large'))
+    num_blue_transactions = float(redis_db.get('num_' + BLUE + '_large'))
+    num_yellow_transactions = float(redis_db.get('num_' + YELLOW + '_large'))
+    num_green_transactions = float(redis_db.get('num_' + GREEN + '_large'))
 
+    num_caught = num_red_transactions + num_blue_transactions + num_yellow_transactions + num_green_transactions
+    percent_caught = float(redis_db.get('percent_caught'))
+
+    num_tot_transactions = num_caught / percent_caught
+
+    # Write to local CSV file for D3 visualization
     csv_path = str(os.path.join(app.root_path, 'static'))
-    f = open(csv_path + "/transaction_counts.csv", 'w+')
+    f = open(csv_path + "/transaction_ratios.csv", 'w+')
     try:
         writer = csv.writer(f)
-        writer.writerow(['transaction_type', 'count'])
-        writer.writerow(['Food', num_red_transactions])
-        writer.writerow(['Drinks', num_blue_transactions])
-        writer.writerow(['Transportation', num_yellow_transactions])
-        writer.writerow(['Bills', num_green_transactions])
+        writer.writerow(['transaction_type', 'ratio'])
+        writer.writerow(['Food', num_red_transactions / num_tot_transactions])
+        writer.writerow(['Drinks', num_blue_transactions / num_tot_transactions])
+        writer.writerow(['Transportation', num_yellow_transactions / num_tot_transactions])
+        writer.writerow(['Bills', num_green_transactions / num_tot_transactions])
         f.flush()
     finally:
         f.close()
@@ -126,20 +137,3 @@ def process_graph(edges):
 
     print(len(response))
     return response, transitivity
-
-
-# DELETE BELOW
-@app.route('/usersearch')
-def user_search():
-    return render_template("usersearch.html")
-
-
-@app.route('/clustertest')
-def cluster_test():
-    response = generate_response(BLUE)
-    return render_template("/clustertest.html", output=response)
-
-
-@app.route('/realtime')
-def realtime():
-    return render_template("realtime.html")
