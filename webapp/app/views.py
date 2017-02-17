@@ -3,6 +3,7 @@ from __future__ import print_function # In python 2.7
 from app import app
 from flask import jsonify
 from flask import render_template
+from flask import redirect
 from flask import request
 from ast import literal_eval as make_tuple
 import sys
@@ -100,6 +101,11 @@ def yellow_info():
 def green_info():
     response = generate_response(GREEN)
     return render_template("/greeninfo.html", output=response)
+
+
+@app.route('/slides')
+def slides():
+    return redirect("http://www.slideshare.net/AnuvedVerma/triangles-71987416")
 
 
 def generate_response(color):

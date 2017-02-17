@@ -13,7 +13,7 @@ Following is my project for the Insight Data Engineering- Silicon Valley Winter 
 
 [Project Slides](http://www.slideshare.net/AnuvedVerma/triangles-71987416)
 
-[Demo Video]()
+[Demo Video](https://www.youtube.com/watch?v=APRHgb9Z0U4)
 
 In this project, I implemented a data pipeline to analyze a stream of Venmo payments. I was particularly interested in studying what types of transactions were most responsible for forming 'cliques'. The cliqueness, or clustering, of the Venmo social network can be quantified by calculating its <i>transitivity</i>. Transitivity is a measure for quantifying the level of clustering in graphs, and is calculated by counting the ratio of triangles (cycles of length 3) to wedges (paths of length 2).
 
