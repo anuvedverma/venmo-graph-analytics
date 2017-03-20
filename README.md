@@ -6,7 +6,7 @@
 
 <img src="./docs/graph.png" width="800">
 
-##Overview
+## Overview
 Following is my project for the Insight Data Engineering- Silicon Valley Winter 2017 fellowship.
 
 [Web Application](http://www.anuvedverma.us)
@@ -24,7 +24,7 @@ My solution for this problem was to implement a one-pass streaming transitivity 
 Initially, my implementation of the streaming transitivity algorithm returned extremely poor approximations-- up to almost 20% difference from the actual transitivity. This is because the algorithm as described by Jha et al. 2013 does not account for repeating edges, which is a frequent occurrence with Venmo transactions (multiple food-related transactions may happen between the same two users). The circumvent this, I used a Scalable Bloom Filter to track and ignore repeated edges, which yielded much better results.
 
 
-##Pipeline
+## Pipeline
 <img src="./docs/pipeline.png" width="800">
 
 Historical Venmo data is stored on Amazon S3, which I used for batch processes as well as simulated streams. 
@@ -32,7 +32,7 @@ Historical Venmo data is stored on Amazon S3, which I used for batch processes a
 For the batch part of the pipeline, I used Spark to process the data into colored edges, which were then stored on Redis. On the streaming side, I emulated a stream by from S3 into Kafka, then processed the transactions with my Kafka Consumer. The results were also stored on Redis. My Flask application then queried the Redis database for the relevant data.
 
 
-##Repository Structure
+## Repository Structure
 
 - `./src/` contains all relevant files for replicating the batch and streaming portions of the project
 
