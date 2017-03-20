@@ -9,8 +9,6 @@
 ## Overview
 Following is my project for the Insight Data Engineering- Silicon Valley Winter 2017 fellowship.
 
-[Web Application](http://www.anuvedverma.us)
-
 [Project Slides](http://www.slideshare.net/AnuvedVerma/triangles-71987416)
 
 [Demo Video](https://www.youtube.com/watch?v=APRHgb9Z0U4)
